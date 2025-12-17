@@ -1,0 +1,110 @@
+/* Base Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  background: linear-gradient(135deg, #eef2f3, #e6f0ff);
+  color: #1f2937;
+  min-height: 100vh;
+}
+
+/* Layout */
+.container {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+/* Cards */
+.card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  margin-bottom: 16px;
+}
+
+/* Status Card */
+.status-card {
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* Vitals */
+.vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.vital-card {
+  text-align: center;
+}
+
+.label {
+  display: block;
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.value {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* Fusion */
+.fusion-section h2 {
+  margin: 10px 0 12px;
+  font-size: 1.2rem;
+}
+
+.fusion-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fusion-cards div {
+  background: #f9fafb;
+  border-left: 5px solid #3b82f6;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Responsive tweak */
+@media (max-width: 600px) {
+  .status-card {
+    font-size: 1.2rem;
+  }
+}
