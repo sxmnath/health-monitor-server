@@ -1,4 +1,4 @@
-const API = "http://10.119.198.71:3000/api/dashboard"; //same ip as device ip in arduino code
+const API = "/api/dashboard"; //same ip as device ip in arduino code
 
 function healthLabel(score) {
   if (score <= 1) return "Normal";
