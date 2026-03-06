@@ -4,11 +4,12 @@
 #include "MAX30105.h"
 #include "spo2_algorithm.h"
 #include <Adafruit_TMP117.h>
+#include <WiFiManager.h>
 
 /* --- WIFI --check this block everytiume, need to match ipv4- */
-const char* ssid = "jump-68";
-const char* password = "12345678";
-String serverURL = "http://10.119.198.71:3000/data"; 
+//const char* ssid = "soumil123";
+//const char* password = "soumil123";
+String serverURL = "https://health-monitor-server-2pbh.onrender.com/data"; 
 
 /* -------------------- OBJECTS -------------------- */
 MAX30105 particleSensor;
@@ -37,12 +38,24 @@ void setup() {
   delay(1000);
 
   /* ---------- WIFI ---------- */
-  WiFi.begin(ssid, password);
+  /*WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\n WiFi Connected");
+
+  Serial.println("\n WiFi Connected");*/
+WiFiManager wm;
+
+bool res = wm.autoConnect("HealthMonitor-Setup");
+
+if(!res) {
+  Serial.println("WiFi Failed");
+  ESP.restart();
+}
+
+Serial.println("WiFi Connected!");
+Serial.println(WiFi.localIP());
 
   /* ---------- I2C ---------- */
   Wire.begin(21, 22);
