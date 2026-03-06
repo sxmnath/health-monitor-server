@@ -30,3 +30,11 @@ change the ipv4 in app.js
 
 npx serve .
 
+
+
+
+
+website deployed on render - https://health-monitor-server-2pbh.onrender.com/
+
+GitHub repo - https://github.com/sxmnath/health-monitor-server
+
