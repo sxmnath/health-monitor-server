@@ -14,6 +14,9 @@
 ### Web Dashboard
 ![Dashboard](assets/dashboard.png)
 
+### Circuit Diagram
+![Circuit Diagram](assets/circuit_diagram.png)
+
 ---
 
 ## Data Flow
