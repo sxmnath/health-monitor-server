@@ -2,7 +2,7 @@
 
 > Real-time health telemetry pipeline — ESP32 → Node.js REST API → MongoDB Atlas → Live Web Dashboard
 
-**Live Dashboard:** [your-app.onrender.com](https://health-monitor-server-2pbh.onrender.com)
+**Live Dashboard:** [healthmonitor.com](https://health-monitor-server-2pbh.onrender.com)
 
 ---
 
