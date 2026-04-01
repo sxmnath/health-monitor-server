@@ -99,13 +99,3 @@ MongoDB is hosted on **MongoDB Atlas** (free tier).
 
 MIT
 ```
-
----
-
-## Step 3 — Also add these two small things
-
-**`.gitignore`** at root (if not already there):
-```
-node_modules/
-.env
-*.DS_Store
