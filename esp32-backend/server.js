@@ -15,7 +15,8 @@ app.use(express.json());
 app.use((req, _res, next) => { req.io = io; next(); });
 
 const path = require("path");
-app.use(express.static(path.join(__dirname, "../esp32-frontend")));
+// index:false stops Express auto-serving index.html for "/" so our explicit route below takes over
+app.use(express.static(path.join(__dirname, "../esp32-frontend"), { index: false }));
 //db
 mongoose.connect(
   process.env.MONGO_URI
@@ -124,6 +125,9 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => console.log("[WS] Client disconnected:", socket.id));
 });
+
+// Redirect /index.html → / so the static file never intercepts
+app.get("/index.html", (req, res) => { res.redirect("/"); });
 
 // Root → Patient List page
 app.get("/", (req, res) => {
