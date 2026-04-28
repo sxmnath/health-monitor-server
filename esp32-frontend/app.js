@@ -267,34 +267,60 @@ function dismissAlert(key) {
 
 // ─── Chart.js setup ───────────────────────────────────────────────────────────
 
-function initCharts() {
-  const commonOptions = {
+function makeChartOptions({ yLabel, yMin, yMax, color, tickSuffix }) {
+  return {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "#ffffff",
+        titleColor: "#0f172a",
+        bodyColor: "#475569",
+        borderColor: "#e2e8f0",
+        borderWidth: 1,
+        padding: 10,
+        callbacks: {
+          label: ctx => ` ${ctx.parsed.y}${tickSuffix}`
+        }
+      }
+    },
     scales: {
-      x: { ticks: { color: "#94a3b8", maxTicksLimit: 10 }, grid: { color: "rgba(255,255,255,0.05)" } },
-      y: { ticks: { color: "#94a3b8" },                   grid: { color: "rgba(255,255,255,0.05)" } },
+      x: {
+        ticks: { color: "#94a3b8", maxTicksLimit: 8, font: { size: 11 } },
+        grid:  { color: "rgba(0,0,0,0.05)" },
+        title: { display: true, text: "Time", color: "#94a3b8", font: { size: 11, weight: "500" } }
+      },
+      y: {
+        min: yMin,
+        max: yMax,
+        ticks: {
+          color: "#94a3b8",
+          font: { size: 11 },
+          callback: val => val + tickSuffix
+        },
+        grid:  { color: "rgba(0,0,0,0.05)" },
+        title: { display: true, text: yLabel, color: "#94a3b8", font: { size: 11, weight: "500" } }
+      }
     },
     elements: {
-      line:  { tension: 0.4, borderWidth: 3 },
-      point: { radius: 0, hitRadius: 10, hoverRadius: 5 },
-    },
+      line:  { tension: 0.4, borderWidth: 2.5 },
+      point: { radius: 0, hitRadius: 12, hoverRadius: 5, hoverBackgroundColor: color }
+    }
   };
+}
 
-  const createChart = (ctx, label, color) =>
-    new Chart(ctx, {
+function initCharts() {
+  const makeChart = (id, label, color, opts) =>
+    new Chart(document.getElementById(id).getContext("2d"), {
       type: "line",
-      data: {
-        labels: [],
-        datasets: [{ label, data: [], borderColor: color, backgroundColor: color + "33", fill: true }],
-      },
-      options: commonOptions,
+      data: { labels: [], datasets: [{ label, data: [], borderColor: color, backgroundColor: color + "18", fill: true }] },
+      options: makeChartOptions({ color, ...opts })
     });
 
-  hrChart   = createChart(document.getElementById("hrChart").getContext("2d"),   "Heart Rate",  "#ef4444");
-  spo2Chart = createChart(document.getElementById("spo2Chart").getContext("2d"), "SpO2",        "#06b6d4");
-  tempChart = createChart(document.getElementById("tempChart").getContext("2d"), "Temperature", "#eab308");
+  hrChart   = makeChart("hrChart",   "Heart Rate",  "#ef4444", { yLabel: "bpm",  yMin: 30,  yMax: 180, tickSuffix: " bpm" });
+  spo2Chart = makeChart("spo2Chart", "SpO₂",        "#0891b2", { yLabel: "%",    yMin: 80,  yMax: 100, tickSuffix: "%" });
+  tempChart = makeChart("tempChart", "Temperature", "#d97706", { yLabel: "°C",   yMin: 34,  yMax: 42,  tickSuffix: "°C" });
 }
 
 function updateLiveCharts(timeLabel, hr, spo2, temp) {

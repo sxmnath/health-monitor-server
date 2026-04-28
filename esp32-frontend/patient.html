@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Health Monitor Dashboard</title>
+  <title>Health Monitor — Patient Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -14,11 +15,10 @@
 </head>
 <body>
 
-  <!-- Dynamic Live Background -->
   <div class="bg-blob blob-1"></div>
   <div class="bg-blob blob-2"></div>
 
-  <div class="container glass-panel">
+  <div class="container">
 
     <!-- Patient Status Banner -->
     <div id="patientBanner" class="patient-banner">
@@ -26,7 +26,7 @@
       <span id="bannerText">Patient Stable</span>
     </div>
 
-    <!-- Back to Ward breadcrumb -->
+    <!-- Back to Ward -->
     <nav class="breadcrumb">
       <a href="/" class="back-link"><i class="fa-solid fa-chevron-left"></i> Ward Overview</a>
     </nav>
@@ -35,7 +35,7 @@
     <header class="header">
       <div class="header-content">
         <h1 id="patientName">Health Monitor</h1>
-        <span class="subtitle">Real-time Health Intelligence</span>
+        <span class="subtitle">Real-time Vital Signs</span>
       </div>
       <div class="pulse-indicator" id="wsIndicator">
         <span class="dot" id="wsDot"></span>
@@ -87,7 +87,7 @@
       <div class="card vital-card interactive" id="card-temp">
         <div class="vital-header">
           <div class="vital-title">
-            <i class="fa-solid fa-temperature-half icon-temp"></i>
+            <i class="fa-solid fa-temperature-half icon-temp\"></i>
             <span class="label">Temperature</span>
           </div>
           <div class="vital-status" id="status-temp">--</div>
@@ -101,10 +101,11 @@
       </div>
     </section>
 
-    <!-- Smart Alerts Panel -->
+    <!-- Alerts -->
     <section class="alerts-section" id="alertsSection">
       <div class="alerts-header">
-        <h2 class="section-title"><i class="fa-solid fa-triangle-exclamation"></i> Alerts
+        <h2 class="section-title">
+          <i class="fa-solid fa-triangle-exclamation"></i> Alerts
           <span class="alert-badge" id="alertBadge" style="display:none">0</span>
         </h2>
         <button class="clear-btn" id="clearAlertsBtn" title="Clear all alerts">
@@ -119,7 +120,7 @@
       </div>
     </section>
 
-    <!-- Data Visualization -->
+    <!-- Charts -->
     <section class="charts-section">
       <div class="charts-header">
         <h2 class="section-title"><i class="fa-solid fa-chart-line"></i> Trend Analysis</h2>
@@ -130,19 +131,44 @@
         </div>
       </div>
       <div class="charts-grid">
-        <div class="card chart-card">
-          <canvas id="hrChart"></canvas>
+
+        <div class="chart-card chart-hr">
+          <div class="chart-label">
+            <i class="fa-solid fa-heart-pulse" style="color:#ef4444;font-size:0.9rem"></i>
+            <span class="chart-label-text">Heart Rate</span>
+            <span class="chart-label-unit">— beats per minute (bpm)</span>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="hrChart"></canvas>
+          </div>
         </div>
-        <div class="card chart-card">
-          <canvas id="spo2Chart"></canvas>
+
+        <div class="chart-card chart-spo2">
+          <div class="chart-label">
+            <i class="fa-solid fa-lungs" style="color:#0891b2;font-size:0.9rem"></i>
+            <span class="chart-label-text">Blood Oxygen (SpO₂)</span>
+            <span class="chart-label-unit">— saturation (%)</span>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="spo2Chart"></canvas>
+          </div>
         </div>
-        <div class="card chart-card">
-          <canvas id="tempChart"></canvas>
+
+        <div class="chart-card chart-temp">
+          <div class="chart-label">
+            <i class="fa-solid fa-temperature-half" style="color:#d97706;font-size:0.9rem"></i>
+            <span class="chart-label-text">Body Temperature</span>
+            <span class="chart-label-unit">— degrees Celsius (°C)</span>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="tempChart"></canvas>
+          </div>
         </div>
+
       </div>
     </section>
 
-    <!-- Sensor Fusion Data -->
+    <!-- AI Insights -->
     <section class="fusion-section">
       <h2 class="section-title"><i class="fa-solid fa-brain"></i> AI Health Insights</h2>
       <div id="fusion" class="fusion-cards">
