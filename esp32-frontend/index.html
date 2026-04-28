@@ -664,27 +664,14 @@ function refreshChart(which){
 }
 
 function updateAllCharts(hr, spo2, tempF, spo2NC){
-  // Only push live data if valid
-  if(hr!=null && spo2!=null && tempF!=null) pushLive(hr, spo2NC?null:spo2, tempF);
-  ['hr','spo2','temp'].forEach(k=>{ if(chartMode[k]==='live') refreshChart(k); });
+  // Push as long as we have HR and temp; spo2 can be null when sensor not connected
+  if(hr!=null && tempF!=null) pushLive(hr, spo2NC ? null : spo2, tempF);
 }
 
 // On load, refresh historical charts if they have data
 ['hr','spo2','temp'].forEach(k=>refreshChart(k));
 
-// ======= WEBSOCKET / POLLING =======
-let socket = null;
-function initSocket(){
-  try{
-    const s=new WebSocket(`ws://${location.hostname}:3000`);
-    s.onmessage=(e)=>{
-      try{ const d=JSON.parse(e.data); if(d.patient_id===patientId||d.deviceId) handleData(d); } catch{}
-    };
-    s.onerror=()=>startPolling();
-    socket=s;
-  } catch{ startPolling(); }
-}
-
+// ======= SOCKET.IO + POLLING =======
 function handleData(raw){
   const {hr,spo2,tempF,tempC,spo2NC}=processVitals(raw);
   updateVitals(hr,spo2,tempF,spo2NC);
@@ -692,55 +679,56 @@ function handleData(raw){
   updateAllCharts(hr, spo2, tempF, spo2NC);
 }
 
-let pollInterval=null;
+// --- HTTP Polling (always runs as baseline) ---
+let pollInterval = null;
 function startPolling(){
   if(pollInterval) return;
   async function poll(){
     try{
-      const r=await fetch(`/dashboard?patientId=${patientId}`);
-      if(r.ok){ const d=await r.json(); handleData(d.latestData||d); }
-    } catch{}
+      const r = await fetch(`/dashboard?patientId=${patientId}`);
+      if(r.ok){
+        const d = await r.json();
+        // Backend returns { latestData: {...} } or the data object directly
+        const payload = d.latestData || d;
+        if(payload && (payload.heartRate != null || payload.spo2 != null)){
+          handleData(payload);
+        }
+      }
+    } catch(e){ /* backend not reachable, stay silent */ }
   }
   poll();
-  pollInterval=setInterval(poll,3000);
+  pollInterval = setInterval(poll, 3000);
 }
 
-// Try socket first, fall back to demo if neither works
-initSocket();
-setTimeout(()=>{
-  if(!socket||socket.readyState>1){
-    startPolling();
-    // Fallback demo if no backend
-    setTimeout(()=>{
-      if(liveHR.length===0){
-        // Simulate demo data
-        let t=Date.now()-60*3000;
-        for(let i=0;i<60;i++){
-          const fakeHR=72+Math.round(Math.sin(i/8)*8+Math.random()*4);
-          const fakeSPO=97+Math.round(Math.random()*2);
-          const fakeTmpF=celsiusToF(36.8+Math.random()*0.4);
-          const ts=new Date(t+i*3000).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-          liveHR.push({t:ts,v:fakeHR}); liveSPO.push({t:ts,v:fakeSPO}); liveTMP.push({t:ts,v:fakeTmpF});
-        }
-        saveHistory(getHistoryKey('live_hr'),liveHR); saveHistory(getHistoryKey('live_spo2'),liveSPO); saveHistory(getHistoryKey('live_temp'),liveTMP);
-        refreshChart('hr'); refreshChart('spo2'); refreshChart('temp');
-        const last=liveHR[liveHR.length-1];
-        updateVitals(last.v, liveSPO[liveSPO.length-1].v, liveTMP[liveTMP.length-1].v, false);
-        runAnalysis(last.v, liveSPO[liveSPO.length-1].v, liveTMP[liveTMP.length-1].v, false);
-      }
-    }, 2000);
-  }
-}, 1500);
+// --- Socket.io (real-time, layered on top of polling) ---
+// Backend uses Socket.io rooms named after patient_id (e.g. "P101")
+// and emits event "update" or "sensorData" with the reading payload
+function initSocketIO(){
+  const script = document.createElement('script');
+  script.src = `http://${location.hostname}:3000/socket.io/socket.io.js`;
+  script.onload = () => {
+    try{
+      const io_socket = io(`http://${location.hostname}:3000`, {transports:['websocket','polling']});
+      io_socket.on('connect', () => {
+        io_socket.emit('join', patientId); // join the patient's room
+      });
+      // Listen for both common event names the backend might emit
+      ['update','sensorData','data','liveData'].forEach(evt => {
+        io_socket.on(evt, (d) => {
+          if(!d) return;
+          const payload = d.latestData || d;
+          if(payload.heartRate != null || payload.spo2 != null) handleData(payload);
+        });
+      });
+    } catch(e){}
+  };
+  script.onerror = () => {}; // socket.io not available, polling handles it
+  document.head.appendChild(script);
+}
 
-// Live demo update (when no backend)
-setInterval(()=>{
-  if(!pollInterval && (!socket||socket.readyState!==1)){
-    const hr=72+Math.round(Math.sin(Date.now()/8000)*8+Math.random()*4);
-    const spo2=97+Math.round(Math.random()*2);
-    const tempF=celsiusToF(36.8+Math.random()*0.4);
-    handleData({heartRate:hr,spo2:spo2,temperature:36.8+Math.random()*0.4});
-  }
-}, 3000);
+// Start both — polling is the reliable fallback, socket.io adds real-time on top
+startPolling();
+initSocketIO();
 
 // ======= EDIT MODAL =======
 function openEditModal(){
