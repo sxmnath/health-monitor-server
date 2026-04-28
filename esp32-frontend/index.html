@@ -1,800 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VitalWatch — Patient Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-:root {
-  --bg: #F5F0E8;
-  --bg2: #EDE8DC;
-  --card: #FDFBF7;
-  --dark: #1A1A18;
-  --ink: #2C2C28;
-  --muted: #7A7870;
-  --accent: #C8A96E;
-  --accent2: #8BAF7C;
-  --danger: #C4614A;
-  --warn: #D4894A;
-  --border: rgba(0,0,0,0.08);
-  --shadow: 0 2px 24px rgba(0,0,0,0.07);
-  --radius: 14px;
-}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
-body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23b8a98a' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");pointer-events:none;z-index:0;}
-.layout{position:relative;z-index:1;display:flex;min-height:100vh;}
-
-/* SIDEBAR */
-.sidebar{width:220px;flex-shrink:0;background:var(--dark);padding:28px 0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
-.logo{padding:0 24px 28px;font-family:'DM Serif Display',serif;font-size:22px;color:#fff;letter-spacing:-0.5px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:16px;}
-.logo span{color:var(--accent);}
-.nav-section{padding:0 12px;margin-bottom:8px;}
-.nav-label{font-size:10px;font-weight:600;letter-spacing:1.5px;color:rgba(255,255,255,0.3);padding:8px 12px 6px;text-transform:uppercase;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;font-size:13.5px;font-weight:500;color:rgba(255,255,255,0.55);cursor:pointer;transition:all 0.15s;text-decoration:none;}
-.nav-item:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);}
-.nav-item.active{background:rgba(200,169,110,0.15);color:var(--accent);}
-.nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:0.7;}
-.nav-item.active svg{opacity:1;}
-.sidebar-footer{margin-top:auto;padding:16px 12px 8px;border-top:1px solid rgba(255,255,255,0.06);}
-
-/* MAIN */
-.main{flex:1;padding:28px 36px;overflow-x:hidden;}
-
-/* TOPBAR */
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
-.breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
-.breadcrumb a{color:var(--muted);text-decoration:none;}
-.breadcrumb a:hover{color:var(--ink);}
-.breadcrumb .sep{opacity:0.4;}
-.breadcrumb .current{color:var(--ink);font-weight:500;}
-.topbar-right{display:flex;align-items:center;gap:12px;}
-.time-badge{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 16px;font-size:13px;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:8px;}
-.dot-live{width:7px;height:7px;border-radius:50%;background:#8BAF7C;animation:pulse 1.4s infinite;}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(0.85)}}
-.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;font-family:'DM Sans',sans-serif;}
-.btn-ghost{background:var(--card);border:1px solid var(--border);color:var(--ink);}
-.btn-ghost:hover{background:var(--bg2);}
-.btn-danger{background:rgba(196,97,74,0.1);border:1px solid rgba(196,97,74,0.2);color:var(--danger);}
-.btn-danger:hover{background:rgba(196,97,74,0.18);}
-.btn-accent{background:var(--accent);color:var(--dark);}
-.btn-accent:hover{filter:brightness(1.05);}
-
-/* PATIENT HEADER CARD */
-.patient-header-card{
-  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-  padding:24px 28px;margin-bottom:20px;box-shadow:var(--shadow);
-  display:flex;align-items:flex-start;justify-content:space-between;gap:20px;
-  position:relative;overflow:hidden;
-}
-.patient-header-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
-.patient-meta{display:flex;align-items:flex-start;gap:20px;flex:1;}
-.patient-avatar{
-  width:64px;height:64px;border-radius:50%;
-  background:linear-gradient(135deg,var(--accent),var(--accent2));
-  display:flex;align-items:center;justify-content:center;
-  font-family:'DM Serif Display',serif;font-size:26px;color:var(--dark);flex-shrink:0;
-}
-.patient-info{flex:1;}
-.patient-name-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
-.patient-name{font-family:'DM Serif Display',serif;font-size:26px;color:var(--ink);line-height:1.1;}
-.pid-badge{display:inline-flex;align-items:center;background:var(--dark);color:var(--accent);font-size:11px;font-weight:700;letter-spacing:0.5px;padding:3px 10px;border-radius:20px;}
-.patient-vitals-pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;}
-.info-pill{display:flex;align-items:center;gap:6px;background:var(--bg2);border-radius:8px;padding:6px 12px;font-size:12.5px;color:var(--ink);}
-.info-pill-label{color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
-.info-pill-val{font-weight:600;}
-.patient-status{display:flex;flex-direction:column;align-items:flex-end;gap:10px;}
-.status-indicator{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;}
-
-/* VITALS GRID */
-.vitals-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
-.vital-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
-.vital-card-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
-.vital-card-label svg{width:14px;height:14px;}
-.vital-value{font-family:'DM Serif Display',serif;font-size:42px;color:var(--ink);line-height:1;display:flex;align-items:baseline;gap:6px;}
-.vital-unit{font-family:'DM Sans',sans-serif;font-size:16px;font-weight:400;color:var(--muted);}
-.vital-sub{font-size:12px;color:var(--muted);margin-top:6px;}
-.vital-bar{height:4px;background:var(--bg2);border-radius:4px;margin-top:12px;overflow:hidden;}
-.vital-bar-fill{height:100%;border-radius:4px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1);}
-.vital-card.danger{border-color:rgba(196,97,74,0.3);}
-.vital-card.danger .vital-value{color:var(--danger);}
-.vital-card.warn{border-color:rgba(212,137,74,0.3);}
-.vital-card.warn .vital-value{color:var(--warn);}
-.vital-card.not-connected{border-color:rgba(0,0,0,0.06);}
-.vital-card.not-connected .vital-value{color:var(--muted);font-size:20px;}
-.nc-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,0.05);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--muted);margin-top:6px;}
-.nc-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
-
-/* CHARTS SECTION */
-.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
-.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);}
-.chart-card.full{grid-column:1/-1;}
-.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-.chart-title{font-family:'DM Serif Display',serif;font-size:16px;}
-.time-tabs{display:flex;gap:4px;background:var(--bg2);border-radius:8px;padding:3px;}
-.time-tab{font-size:12px;font-weight:500;padding:5px 12px;border-radius:6px;cursor:pointer;color:var(--muted);transition:all 0.15s;border:none;background:none;font-family:'DM Sans',sans-serif;}
-.time-tab.active{background:var(--card);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,0.08);}
-.chart-wrap{position:relative;height:180px;}
-
-/* AI ANALYSIS */
-.analysis-card{background:var(--dark);border-radius:var(--radius);padding:22px 26px;margin-bottom:20px;color:#fff;box-shadow:var(--shadow);}
-.analysis-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
-.analysis-icon{width:32px;height:32px;border-radius:8px;background:rgba(200,169,110,0.2);display:flex;align-items:center;justify-content:center;}
-.analysis-title{font-family:'DM Serif Display',serif;font-size:17px;color:#fff;}
-.analysis-sub{font-size:12px;color:rgba(255,255,255,0.4);margin-top:1px;}
-.analysis-indicators{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
-.indicator-tag{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;}
-.tag-normal{background:rgba(139,175,124,0.2);color:#8BAF7C;}
-.tag-warn{background:rgba(212,137,74,0.2);color:#D4894A;}
-.tag-danger{background:rgba(196,97,74,0.2);color:#E07A62;}
-.risk-bar-wrap{display:flex;align-items:center;gap:12px;}
-.risk-label{font-size:12px;color:rgba(255,255,255,0.5);white-space:nowrap;}
-.risk-bar{flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;}
-.risk-fill{height:100%;border-radius:4px;background:var(--accent2);transition:width 1s;}
-
-/* RESET BUTTON SECTION */
-.reset-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow);}
-.reset-info h4{font-weight:600;font-size:14px;margin-bottom:3px;}
-.reset-info p{font-size:12px;color:var(--muted);}
-
-/* MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s;}
-.modal-overlay.open{opacity:1;pointer-events:all;}
-.modal{background:var(--card);border-radius:18px;padding:32px;width:520px;max-width:95vw;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.25s;box-shadow:0 24px 80px rgba(0,0,0,0.2);}
-.modal-overlay.open .modal{transform:translateY(0);}
-.modal-title{font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:6px;}
-.modal-sub{font-size:13px;color:var(--muted);margin-bottom:24px;}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.form-group{display:flex;flex-direction:column;gap:6px;}
-.form-group.full{grid-column:1/-1;}
-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
-input,select,textarea{font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--ink);outline:none;transition:border-color 0.15s;}
-input:focus,select:focus{border-color:var(--accent);}
-.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;}
-
-/* TOAST */
-.toast{position:fixed;bottom:24px;right:24px;background:var(--dark);color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;z-index:2000;transform:translateY(80px);opacity:0;transition:all 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.25);}
-.toast.show{transform:translateY(0);opacity:1;}
-
-::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
-</style>
+  <meta charset="UTF-8" />
+  <title>Health Monitor Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div class="layout">
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="logo">Vital<span>Watch</span></div>
-    <div class="nav-section">
-      <div class="nav-label">Monitor</div>
-      <a href="patients.html" class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Ward Overview
-      </a>
-      <a href="#" class="nav-item active">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Patient Dashboard
-      </a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-label">Settings</div>
-      <div class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-        Alerts Config
-      </div>
-    </div>
-    <div class="sidebar-footer">
-      <div class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Sign Out
-      </div>
-    </div>
-  </aside>
 
-  <!-- MAIN -->
-  <main class="main">
-    <!-- TOPBAR -->
-    <div class="topbar">
-      <div class="breadcrumb">
-        <a href="patients.html">Ward Overview</a>
-        <span class="sep">›</span>
-        <span class="current" id="breadcrumbName">Patient</span>
-      </div>
-      <div class="topbar-right">
-        <div class="time-badge"><div class="dot-live"></div><span id="liveClock"></span></div>
-        <button class="btn btn-ghost" onclick="openEditModal()">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Edit Patient
-        </button>
-      </div>
-    </div>
+  <!-- Dynamic Live Background -->
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
 
-    <!-- PATIENT HEADER CARD -->
-    <div class="patient-header-card" id="patientHeaderCard">
-      <div class="patient-meta">
-        <div class="patient-avatar" id="patientAvatar">—</div>
-        <div class="patient-info">
-          <div class="patient-name-row">
-            <div class="patient-name" id="patientNameDisplay">Loading…</div>
-            <div class="pid-badge" id="patientPidBadge">—</div>
-          </div>
-          <div class="patient-vitals-pills" id="patientPills"></div>
-        </div>
-      </div>
-      <div class="patient-status">
-        <div class="status-indicator" id="healthStatus">
-          <div class="dot-live"></div> Monitoring
-        </div>
-        <div style="font-size:12px;color:var(--muted);text-align:right;" id="lastUpdated">—</div>
-      </div>
-    </div>
+  <div class="container glass-panel">
 
-    <!-- VITALS -->
-    <div class="vitals-row">
-      <div class="vital-card" id="card-hr">
-        <div class="vital-card-label">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          Heart Rate
-        </div>
-        <div class="vital-value" id="val-hr">—<span class="vital-unit">bpm</span></div>
-        <div class="vital-sub" id="sub-hr">Moving average</div>
-        <div class="vital-bar"><div class="vital-bar-fill" id="bar-hr" style="width:0%;background:var(--accent);"></div></div>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <h1 id="patientName">Health Monitor</h1>
+        <span class="subtitle">Real-time Health Intelligence</span>
       </div>
-      <div class="vital-card" id="card-spo2">
-        <div class="vital-card-label">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z"/><path d="M12 8v4l3 3"/></svg>
-          SpO₂
-        </div>
-        <div class="vital-value" id="val-spo2">—<span class="vital-unit">%</span></div>
-        <div class="vital-sub" id="sub-spo2">Blood oxygen saturation</div>
-        <div class="vital-bar"><div class="vital-bar-fill" id="bar-spo2" style="width:0%;background:var(--accent2);"></div></div>
+      <div class="pulse-indicator">
+        <span class="dot"></span>
+        <span class="status-text">Live</span>
       </div>
-      <div class="vital-card" id="card-temp">
-        <div class="vital-card-label">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
-          Temperature
-        </div>
-        <div class="vital-value" id="val-temp">—<span class="vital-unit">°F</span></div>
-        <div class="vital-sub" id="sub-temp">Body temperature</div>
-        <div class="vital-bar"><div class="vital-bar-fill" id="bar-temp" style="width:0%;background:var(--warn);"></div></div>
-      </div>
-    </div>
+    </header>
 
-    <!-- AI ANALYSIS -->
-    <div class="analysis-card" id="analysisCard">
-      <div class="analysis-header">
-        <div class="analysis-icon">
-          <svg width="16" height="16" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-        </div>
-        <div>
-          <div class="analysis-title">Health Intelligence</div>
-          <div class="analysis-sub">Signal fusion · Moving average · Peak detection</div>
-        </div>
+    <!-- Overall Status -->
+    <section id="statusCard" class="card status-card">
+      <div class="status-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+      <div class="status-info">
+        <h3>Current Status</h3>
+        <p id="status-label">Loading...</p>
       </div>
-      <div class="analysis-indicators" id="analysisIndicators">
-        <span class="indicator-tag tag-normal">Awaiting data…</span>
-      </div>
-      <div class="risk-bar-wrap">
-        <span class="risk-label">Risk score</span>
-        <div class="risk-bar"><div class="risk-fill" id="riskFill" style="width:0%"></div></div>
-        <span style="font-size:12px;color:rgba(255,255,255,0.5);" id="riskScore">0/10</span>
-      </div>
-    </div>
+    </section>
 
-    <!-- CHARTS -->
-    <div class="charts-grid">
-      <div class="chart-card">
-        <div class="chart-header">
-          <div class="chart-title">Heart Rate</div>
-          <div class="time-tabs" id="hrTabs">
-            <button class="time-tab active" onclick="switchChart('hr','live',this)">Live</button>
-            <button class="time-tab" onclick="switchChart('hr','1h',this)">1 Hr</button>
-            <button class="time-tab" onclick="switchChart('hr','24h',this)">24 Hr</button>
-          </div>
+    <!-- Vitals -->
+    <section class="vitals-grid">
+      <div class="card vital-card interactive" id="card-hr">
+        <div class="vital-header">
+          <i class="fa-solid fa-heart-pulse icon-hr"></i>
+          <span class="label">Heart Rate</span>
         </div>
-        <div class="chart-wrap"><canvas id="chartHR"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <div class="chart-title">SpO₂</div>
-          <div class="time-tabs" id="spo2Tabs">
-            <button class="time-tab active" onclick="switchChart('spo2','live',this)">Live</button>
-            <button class="time-tab" onclick="switchChart('spo2','1h',this)">1 Hr</button>
-            <button class="time-tab" onclick="switchChart('spo2','24h',this)">24 Hr</button>
-          </div>
+        <div class="vital-body">
+          <span id="hr" class="value">--</span><span class="unit"> bpm</span>
         </div>
-        <div class="chart-wrap"><canvas id="chartSPO2"></canvas></div>
-      </div>
-      <div class="chart-card full">
-        <div class="chart-header">
-          <div class="chart-title">Temperature (°F)</div>
-          <div class="time-tabs">
-            <button class="time-tab active" onclick="switchChart('temp','live',this)">Live</button>
-            <button class="time-tab" onclick="switchChart('temp','1h',this)">1 Hr</button>
-            <button class="time-tab" onclick="switchChart('temp','24h',this)">24 Hr</button>
-          </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="bar-hr"></div>
         </div>
-        <div class="chart-wrap"><canvas id="chartTEMP"></canvas></div>
       </div>
-    </div>
+      <div class="card vital-card interactive" id="card-spo2">
+        <div class="vital-header">
+          <i class="fa-solid fa-lungs icon-spo2"></i>
+          <span class="label">SpO₂</span>
+        </div>
+        <div class="vital-body">
+          <span id="spo2" class="value">--</span><span class="unit"> %</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="bar-spo2"></div>
+        </div>
+      </div>
+      <div class="card vital-card interactive" id="card-temp">
+        <div class="vital-header">
+          <i class="fa-solid fa-temperature-half icon-temp"></i>
+          <span class="label">Temperature</span>
+        </div>
+        <div class="vital-body">
+          <span id="temp" class="value">--</span><span class="unit"> °C</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="bar-temp"></div>
+        </div>
+      </div>
+    </section>
 
-    <!-- RESET SECTION -->
-    <div class="reset-section">
-      <div class="reset-info">
-        <h4>Data Management</h4>
-        <p>Reset clears all historical readings for this patient from local memory. Sensor data in MongoDB is unaffected.</p>
+    <!-- Sensor Fusion Data -->
+    <section class="fusion-section">
+      <h2 class="section-title"><i class="fa-solid fa-brain"></i> AI Health Insights</h2>
+      <div id="fusion" class="fusion-cards">
+        <div class="card empty-state">Fetching real-time insights...</div>
       </div>
-      <button class="btn btn-danger" onclick="confirmReset()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-        Reset Patient Data
-      </button>
-    </div>
-  </main>
-</div>
+    </section>
 
-<!-- EDIT PATIENT MODAL -->
-<div class="modal-overlay" id="editModal" onclick="closeOnOverlay(event)">
-  <div class="modal">
-    <div class="modal-title">Patient Details</div>
-    <div class="modal-sub">Edit clinical information for this patient</div>
-    <div class="form-grid">
-      <div class="form-group full">
-        <label>Full Name</label>
-        <input type="text" id="f-name" placeholder="e.g. Taigo Wilkinson">
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-info">
+        <i class="fa-regular fa-clock"></i>
+        <span id="updated">Last updated: --</span>
       </div>
-      <div class="form-group">
-        <label>Age</label>
-        <input type="number" id="f-age" placeholder="35" min="0" max="120">
-      </div>
-      <div class="form-group">
-        <label>Gender</label>
-        <select id="f-gender">
-          <option value="">Select</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Blood Type</label>
-        <select id="f-blood">
-          <option value="">Select</option>
-          <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
-          <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Weight (kg)</label>
-        <input type="number" id="f-weight" placeholder="70" step="0.1">
-      </div>
-      <div class="form-group">
-        <label>Height (cm)</label>
-        <input type="number" id="f-height" placeholder="175">
-      </div>
-      <div class="form-group">
-        <label>Room No.</label>
-        <input type="text" id="f-room" placeholder="e.g. 204-A">
-      </div>
-      <div class="form-group">
-        <label>Doctor</label>
-        <input type="text" id="f-doctor" placeholder="Dr. Name">
-      </div>
-      <div class="form-group full">
-        <label>Allergies / Notes</label>
-        <input type="text" id="f-notes" placeholder="e.g. Penicillin allergy">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeEditModal()">Cancel</button>
-      <button class="btn btn-accent" onclick="savePatientInfo()">Save Changes</button>
-    </div>
+    </footer>
+
   </div>
-</div>
 
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
-
-<script>
-// ======= UTILS =======
-const params = new URLSearchParams(location.search);
-const patientId = params.get('id') || 'P101';
-
-function celsiusToF(c){ return (parseFloat(c)*9/5+32); }
-function getPatientKey(){ return 'patientInfo_'+patientId; }
-function getHistoryKey(suffix){ return 'history_'+patientId+'_'+suffix; }
-
-function loadInfo(){ try{ return JSON.parse(localStorage.getItem(getPatientKey()))||{}; } catch{ return {}; } }
-function saveInfo(obj){ localStorage.setItem(getPatientKey(), JSON.stringify(obj)); }
-
-function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
-
-// ======= HISTORY STORAGE =======
-// Each patient keeps ring-buffers: live (last 60 pts), 1h (per-minute avg), 24h (per-hour avg)
-const LIVE_MAX = 60, H1_MAX = 60, H24_MAX = 24;
-
-function loadHistory(key){ try{ return JSON.parse(localStorage.getItem(key))||[]; } catch{ return []; } }
-function saveHistory(key,arr){ try{ localStorage.setItem(key, JSON.stringify(arr)); } catch{} }
-
-const liveHR  = loadHistory(getHistoryKey('live_hr'));
-const liveSPO = loadHistory(getHistoryKey('live_spo2'));
-const liveTMP = loadHistory(getHistoryKey('live_temp'));
-const h1HR    = loadHistory(getHistoryKey('1h_hr'));
-const h1SPO   = loadHistory(getHistoryKey('1h_spo2'));
-const h1TMP   = loadHistory(getHistoryKey('1h_temp'));
-const h24HR   = loadHistory(getHistoryKey('24h_hr'));
-const h24SPO  = loadHistory(getHistoryKey('24h_spo2'));
-const h24TMP  = loadHistory(getHistoryKey('24h_temp'));
-
-// Accumulators for hourly/minutely averaging
-let minBucket = {hr:[],spo2:[],temp:[],start: Date.now()};
-let hourBucket = {hr:[],spo2:[],temp:[],start: Date.now()};
-
-function pushLive(hr, spo2, tempF){
-  const t = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  liveHR.push({t,v:hr}); if(liveHR.length>LIVE_MAX)liveHR.shift();
-  liveSPO.push({t,v:spo2}); if(liveSPO.length>LIVE_MAX)liveSPO.shift();
-  liveTMP.push({t,v:tempF}); if(liveTMP.length>LIVE_MAX)liveTMP.shift();
-  saveHistory(getHistoryKey('live_hr'), liveHR);
-  saveHistory(getHistoryKey('live_spo2'), liveSPO);
-  saveHistory(getHistoryKey('live_temp'), liveTMP);
-
-  // Accumulate for minute bucket
-  if(hr>0)minBucket.hr.push(hr); if(spo2>0)minBucket.spo2.push(spo2); if(tempF>0)minBucket.temp.push(tempF);
-  if(Date.now()-minBucket.start >= 60000){
-    const avgHr=avg(minBucket.hr),avgSpo=avg(minBucket.spo2),avgTmp=avg(minBucket.temp);
-    const tt=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-    if(avgHr){ h1HR.push({t:tt,v:avgHr}); if(h1HR.length>H1_MAX)h1HR.shift(); }
-    if(avgSpo){ h1SPO.push({t:tt,v:avgSpo}); if(h1SPO.length>H1_MAX)h1SPO.shift(); }
-    if(avgTmp){ h1TMP.push({t:tt,v:avgTmp}); if(h1TMP.length>H1_MAX)h1TMP.shift(); }
-    saveHistory(getHistoryKey('1h_hr'), h1HR);
-    saveHistory(getHistoryKey('1h_spo2'), h1SPO);
-    saveHistory(getHistoryKey('1h_temp'), h1TMP);
-    hourBucket.hr.push(...minBucket.hr); hourBucket.spo2.push(...minBucket.spo2); hourBucket.temp.push(...minBucket.temp);
-    minBucket={hr:[],spo2:[],temp:[],start:Date.now()};
-  }
-  if(Date.now()-hourBucket.start >= 3600000){
-    const avgHr=avg(hourBucket.hr),avgSpo=avg(hourBucket.spo2),avgTmp=avg(hourBucket.temp);
-    const tt=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-    if(avgHr){ h24HR.push({t:tt,v:avgHr}); if(h24HR.length>H24_MAX)h24HR.shift(); }
-    if(avgSpo){ h24SPO.push({t:tt,v:avgSpo}); if(h24SPO.length>H24_MAX)h24SPO.shift(); }
-    if(avgTmp){ h24TMP.push({t:tt,v:avgTmp}); if(h24TMP.length>H24_MAX)h24TMP.shift(); }
-    saveHistory(getHistoryKey('24h_hr'), h24HR);
-    saveHistory(getHistoryKey('24h_spo2'), h24SPO);
-    saveHistory(getHistoryKey('24h_temp'), h24TMP);
-    hourBucket={hr:[],spo2:[],temp:[],start:Date.now()};
-  }
-}
-function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
-
-// ======= MOVING AVERAGE + PEAK DETECTION =======
-const MA_WINDOW = 5;
-const rRawHR=[], rRawSPO=[], rRawTMP=[];
-
-function movingAvg(buf){ if(buf.length===0) return null; const w=buf.slice(-MA_WINDOW); return w.reduce((a,b)=>a+b,0)/w.length; }
-
-function isNoisyHR(v){ return v<30||v>250; }
-function isNoisySPO(v){ return v<50||v>100; }
-function isNoisyTMP(v){ return v<30||v>50; } // Celsius range
-
-function addRaw(buf,v){ buf.push(v); if(buf.length>30)buf.shift(); }
-
-function processVitals(raw){
-  const { heartRate:rawHR, spo2:rawSPO, temperature:rawTMPC } = raw;
-
-  // SPO2 -1 means not connected
-  const spo2NC = (rawSPO === -1 || rawSPO == null);
-
-  let hr=null, spo2=null, tempC=null;
-  if(!isNoisyHR(rawHR)){ addRaw(rRawHR,rawHR); hr=movingAvg(rRawHR); }
-  if(!spo2NC && !isNoisySPO(rawSPO)){ addRaw(rRawSPO,rawSPO); spo2=movingAvg(rRawSPO); }
-  if(!isNoisyTMP(rawTMPC)){ addRaw(rRawTMP,rawTMPC); tempC=movingAvg(rRawTMP); }
-
-  const tempF = tempC != null ? celsiusToF(tempC) : null;
-  return { hr, spo2, tempF, tempC, spo2NC };
-}
-
-// ======= CLOCK =======
-function updateClock(){ document.getElementById('liveClock').textContent = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
-setInterval(updateClock,1000); updateClock();
-
-// ======= PATIENT INFO UI =======
-function renderPatientHeader(){
-  const info = loadInfo();
-  const name = info.name || patientId;
-  document.getElementById('patientNameDisplay').textContent = name;
-  document.getElementById('patientPidBadge').textContent = patientId;
-  document.getElementById('breadcrumbName').textContent = name;
-  document.title = 'VitalWatch — '+name;
-
-  const initials = name.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2) || '?';
-  document.getElementById('patientAvatar').textContent = initials;
-
-  const pills = [];
-  if(info.age) pills.push({l:'Age',v:info.age+' yrs'});
-  if(info.gender) pills.push({l:'Gender',v:info.gender});
-  if(info.bloodType) pills.push({l:'Blood',v:info.bloodType});
-  if(info.weight) pills.push({l:'Weight',v:info.weight+' kg'});
-  if(info.height) pills.push({l:'Height',v:info.height+' cm'});
-  if(info.roomNo) pills.push({l:'Room',v:info.roomNo});
-  if(info.doctor) pills.push({l:'Doctor',v:info.doctor});
-  if(info.notes) pills.push({l:'Notes',v:info.notes});
-
-  document.getElementById('patientPills').innerHTML = pills.map(p=>`
-    <div class="info-pill">
-      <span class="info-pill-label">${p.l}</span>
-      <span class="info-pill-val">${p.v}</span>
-    </div>`).join('');
-}
-
-// ======= VITALS DISPLAY =======
-function updateVitals(hr, spo2, tempF, spo2NC){
-  const cHR=document.getElementById('card-hr'), vHR=document.getElementById('val-hr');
-  const cSPO=document.getElementById('card-spo2'), vSPO=document.getElementById('val-spo2');
-  const cTMP=document.getElementById('card-temp'), vTMP=document.getElementById('val-temp');
-  const bHR=document.getElementById('bar-hr'),bSPO=document.getElementById('bar-spo2'),bTMP=document.getElementById('bar-temp');
-
-  // HR
-  cHR.className='vital-card';
-  if(hr!=null){
-    const hrR=Math.round(hr);
-    vHR.innerHTML=hrR+'<span class="vital-unit">bpm</span>';
-    document.getElementById('sub-hr').textContent=`Moving avg · ${rRawHR.length} samples`;
-    bHR.style.width=Math.min(100,(hrR/200)*100)+'%';
-    if(hrR>130||hrR<45){cHR.classList.add('danger');bHR.style.background='var(--danger)';}
-    else if(hrR>110||hrR<55){cHR.classList.add('warn');bHR.style.background='var(--warn)';}
-    else bHR.style.background='var(--accent)';
-  }
-
-  // SPO2
-  cSPO.className='vital-card';
-  if(spo2NC){
-    cSPO.classList.add('not-connected');
-    vSPO.innerHTML='<span style="font-size:18px;color:var(--muted)">Not Connected</span>';
-    document.getElementById('sub-spo2').innerHTML='<span class="nc-badge"><span class="nc-dot"></span>Sensor disconnected</span>';
-    bSPO.style.width='0%';
-  } else if(spo2!=null){
-    const sR=Math.round(spo2);
-    vSPO.innerHTML=sR+'<span class="vital-unit">%</span>';
-    document.getElementById('sub-spo2').textContent=`Moving avg · ${rRawSPO.length} samples`;
-    bSPO.style.width=Math.min(100,((sR-85)/15)*100)+'%';
-    if(sR<90){cSPO.classList.add('danger');bSPO.style.background='var(--danger)';}
-    else if(sR<95){cSPO.classList.add('warn');bSPO.style.background='var(--warn)';}
-    else bSPO.style.background='var(--accent2)';
-  }
-
-  // TEMP
-  cTMP.className='vital-card';
-  if(tempF!=null){
-    const tR=tempF.toFixed(1);
-    vTMP.innerHTML=tR+'<span class="vital-unit">°F</span>';
-    const tempC=(tempF-32)*5/9;
-    document.getElementById('sub-temp').textContent=`${(tempC).toFixed(1)}°C · ${rRawTMP.length} samples`;
-    // Range 90-104F
-    bTMP.style.width=Math.min(100,Math.max(0,((tempF-90)/14)*100))+'%';
-    if(tempF>103||tempF<94){cTMP.classList.add('danger');bTMP.style.background='var(--danger)';}
-    else if(tempF>101||tempF<96){cTMP.classList.add('warn');bTMP.style.background='var(--warn)';}
-    else bTMP.style.background='var(--accent2)';
-  }
-
-  document.getElementById('lastUpdated').textContent='Last update: '+new Date().toLocaleTimeString('en-IN');
-}
-
-// ======= HEALTH ANALYSIS =======
-function runAnalysis(hr, spo2, tempF, spo2NC){
-  const indicators=[], tagEls=[];
-  let risk=0;
-  const tempC = tempF!=null?(tempF-32)*5/9:null;
-
-  if(spo2NC){
-    indicators.push(['SpO₂ Not Connected','tag-warn']); risk+=1;
-  } else if(spo2!=null){
-    if(spo2<90){indicators.push(['Low SpO₂ — Critical','tag-danger']);risk+=4;}
-    else if(spo2<95){indicators.push(['SpO₂ Borderline','tag-warn']);risk+=2;}
-  }
-  if(hr!=null){
-    if(hr>130){indicators.push(['Tachycardia','tag-danger']);risk+=3;}
-    else if(hr>110){indicators.push(['Elevated HR','tag-warn']);risk+=2;}
-    else if(hr<45){indicators.push(['Bradycardia','tag-danger']);risk+=3;}
-    else if(hr<55){indicators.push(['Low HR','tag-warn']);risk+=1;}
-    if(hr>100&&spo2!=null&&spo2>=95&&tempC!=null&&tempC<37.5){indicators.push(['Possible Stress','tag-warn']);risk+=1;}
-  }
-  if(tempC!=null){
-    if(tempC>=39.5){indicators.push(['High Fever','tag-danger']);risk+=3;}
-    else if(tempC>=38.5){indicators.push(['Fever','tag-warn']);risk+=2;}
-    else if(tempC<35.5){indicators.push(['Hypothermia Risk','tag-danger']);risk+=3;}
-    if(tempC>=37.8&&hr!=null&&hr>95){indicators.push(['Fever + Tachycardia','tag-warn']);risk+=1;}
-    if(spo2!=null&&spo2<92&&hr!=null&&hr<=100){indicators.push(['Respiratory Concern','tag-danger']);risk+=2;}
-  }
-  if(indicators.length===0) indicators.push(['All Vitals Normal','tag-normal']);
-
-  document.getElementById('analysisIndicators').innerHTML = indicators.map(([l,c])=>`<span class="indicator-tag ${c}">${l}</span>`).join('');
-  const pct=Math.min(100,(risk/10)*100);
-  document.getElementById('riskFill').style.width=pct+'%';
-  document.getElementById('riskFill').style.background=risk>=6?'var(--danger)':risk>=3?'var(--warn)':'var(--accent2)';
-  document.getElementById('riskScore').textContent=risk+'/10';
-
-  const statusEl=document.getElementById('healthStatus');
-  if(risk>=6){statusEl.innerHTML='<span style="width:8px;height:8px;border-radius:50%;background:var(--danger);display:inline-block"></span> <span style="color:var(--danger)">Critical</span>';}
-  else if(risk>=3){statusEl.innerHTML='<span style="width:8px;height:8px;border-radius:50%;background:var(--warn);display:inline-block"></span> <span style="color:var(--warn)">Attention</span>';}
-  else{statusEl.innerHTML='<div class="dot-live"></div> <span style="color:var(--accent2)">Normal</span>';}
-}
-
-// ======= CHARTS =======
-const chartMode = { hr:'live', spo2:'live', temp:'live' };
-
-function makeChartOptions(color, yMin, yMax, label){
-  return {
-    responsive:true, maintainAspectRatio:false, animation:{duration:400},
-    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:c=>` ${c.parsed.y.toFixed(1)} ${label}`}}},
-    scales:{
-      x:{ticks:{font:{size:9},color:'#9A9890',maxTicksLimit:8},grid:{color:'rgba(0,0,0,0.04)'}},
-      y:{min:yMin,max:yMax,ticks:{font:{size:9},color:'#9A9890'},grid:{color:'rgba(0,0,0,0.05)'}}
-    }
-  };
-}
-
-function makeDataset(color){ return {data:[],borderColor:color,backgroundColor:color+'20',tension:0.4,fill:true,pointRadius:2,pointHoverRadius:4,borderWidth:1.5}; }
-
-const charts = {
-  hr:   new Chart(document.getElementById('chartHR'),   {type:'line',data:{labels:[],datasets:[makeDataset('#C8A96E')]},options:makeChartOptions('#C8A96E',40,160,'bpm')}),
-  spo2: new Chart(document.getElementById('chartSPO2'), {type:'line',data:{labels:[],datasets:[makeDataset('#8BAF7C')]},options:makeChartOptions('#8BAF7C',80,100,'%')}),
-  temp: new Chart(document.getElementById('chartTEMP'), {type:'line',data:{labels:[],datasets:[makeDataset('#D4894A')]},options:makeChartOptions('#D4894A',90,104,'°F')}),
-};
-
-function switchChart(which, mode, btn){
-  chartMode[which]=mode;
-  btn.closest('.time-tabs').querySelectorAll('.time-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  refreshChart(which);
-}
-
-function getChartData(which, mode){
-  const map={ hr:[liveHR,h1HR,h24HR], spo2:[liveSPO,h1SPO,h24SPO], temp:[liveTMP,h1TMP,h24TMP] };
-  const arr=map[which][mode==='live'?0:mode==='1h'?1:2];
-  return { labels:arr.map(p=>p.t), values:arr.map(p=>p.v) };
-}
-
-function refreshChart(which){
-  const c=charts[which];
-  const {labels,values}=getChartData(which, chartMode[which]);
-  c.data.labels=labels;
-  c.data.datasets[0].data=values;
-  c.update('none');
-}
-
-function updateAllCharts(hr, spo2, tempF, spo2NC){
-  // Only push live data if valid
-  if(hr!=null && spo2!=null && tempF!=null) pushLive(hr, spo2NC?null:spo2, tempF);
-  ['hr','spo2','temp'].forEach(k=>{ if(chartMode[k]==='live') refreshChart(k); });
-}
-
-// On load, refresh historical charts if they have data
-['hr','spo2','temp'].forEach(k=>refreshChart(k));
-
-// ======= WEBSOCKET / POLLING =======
-let socket = null;
-function initSocket(){
-  try{
-    const s=new WebSocket(`ws://${location.hostname}:3000`);
-    s.onmessage=(e)=>{
-      try{ const d=JSON.parse(e.data); if(d.patient_id===patientId||d.deviceId) handleData(d); } catch{}
-    };
-    s.onerror=()=>startPolling();
-    socket=s;
-  } catch{ startPolling(); }
-}
-
-function handleData(raw){
-  const {hr,spo2,tempF,tempC,spo2NC}=processVitals(raw);
-  updateVitals(hr,spo2,tempF,spo2NC);
-  runAnalysis(hr,spo2,tempF,spo2NC);
-  updateAllCharts(hr, spo2, tempF, spo2NC);
-}
-
-let pollInterval=null;
-function startPolling(){
-  if(pollInterval) return;
-  async function poll(){
-    try{
-      const r=await fetch(`/dashboard?patientId=${patientId}`);
-      if(r.ok){ const d=await r.json(); handleData(d.latestData||d); }
-    } catch{}
-  }
-  poll();
-  pollInterval=setInterval(poll,3000);
-}
-
-// Try socket first, fall back to demo if neither works
-initSocket();
-setTimeout(()=>{
-  if(!socket||socket.readyState>1){
-    startPolling();
-    // Fallback demo if no backend
-    setTimeout(()=>{
-      if(liveHR.length===0){
-        // Simulate demo data
-        let t=Date.now()-60*3000;
-        for(let i=0;i<60;i++){
-          const fakeHR=72+Math.round(Math.sin(i/8)*8+Math.random()*4);
-          const fakeSPO=97+Math.round(Math.random()*2);
-          const fakeTmpF=celsiusToF(36.8+Math.random()*0.4);
-          const ts=new Date(t+i*3000).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-          liveHR.push({t:ts,v:fakeHR}); liveSPO.push({t:ts,v:fakeSPO}); liveTMP.push({t:ts,v:fakeTmpF});
-        }
-        saveHistory(getHistoryKey('live_hr'),liveHR); saveHistory(getHistoryKey('live_spo2'),liveSPO); saveHistory(getHistoryKey('live_temp'),liveTMP);
-        refreshChart('hr'); refreshChart('spo2'); refreshChart('temp');
-        const last=liveHR[liveHR.length-1];
-        updateVitals(last.v, liveSPO[liveSPO.length-1].v, liveTMP[liveTMP.length-1].v, false);
-        runAnalysis(last.v, liveSPO[liveSPO.length-1].v, liveTMP[liveTMP.length-1].v, false);
-      }
-    }, 2000);
-  }
-}, 1500);
-
-// Live demo update (when no backend)
-setInterval(()=>{
-  if(!pollInterval && (!socket||socket.readyState!==1)){
-    const hr=72+Math.round(Math.sin(Date.now()/8000)*8+Math.random()*4);
-    const spo2=97+Math.round(Math.random()*2);
-    const tempF=celsiusToF(36.8+Math.random()*0.4);
-    handleData({heartRate:hr,spo2:spo2,temperature:36.8+Math.random()*0.4});
-  }
-}, 3000);
-
-// ======= EDIT MODAL =======
-function openEditModal(){
-  const info=loadInfo();
-  document.getElementById('f-name').value=info.name||'';
-  document.getElementById('f-age').value=info.age||'';
-  document.getElementById('f-gender').value=info.gender||'';
-  document.getElementById('f-blood').value=info.bloodType||'';
-  document.getElementById('f-weight').value=info.weight||'';
-  document.getElementById('f-height').value=info.height||'';
-  document.getElementById('f-room').value=info.roomNo||'';
-  document.getElementById('f-doctor').value=info.doctor||'';
-  document.getElementById('f-notes').value=info.notes||'';
-  document.getElementById('editModal').classList.add('open');
-}
-function closeEditModal(){ document.getElementById('editModal').classList.remove('open'); }
-function closeOnOverlay(e){ if(e.target.id==='editModal') closeEditModal(); }
-function savePatientInfo(){
-  const info={
-    name:document.getElementById('f-name').value.trim(),
-    age:document.getElementById('f-age').value,
-    gender:document.getElementById('f-gender').value,
-    bloodType:document.getElementById('f-blood').value,
-    weight:document.getElementById('f-weight').value,
-    height:document.getElementById('f-height').value,
-    roomNo:document.getElementById('f-room').value.trim(),
-    doctor:document.getElementById('f-doctor').value.trim(),
-    notes:document.getElementById('f-notes').value.trim(),
-  };
-  saveInfo(info);
-  renderPatientHeader();
-  closeEditModal();
-  showToast('Patient details saved ✓');
-}
-
-// ======= RESET =======
-function confirmReset(){
-  if(!confirm('Reset all historical data for this patient? This cannot be undone.')) return;
-  const keys=[
-    getHistoryKey('live_hr'), getHistoryKey('live_spo2'), getHistoryKey('live_temp'),
-    getHistoryKey('1h_hr'), getHistoryKey('1h_spo2'), getHistoryKey('1h_temp'),
-    getHistoryKey('24h_hr'), getHistoryKey('24h_spo2'), getHistoryKey('24h_temp'),
-  ];
-  keys.forEach(k=>localStorage.removeItem(k));
-  liveHR.length=0; liveSPO.length=0; liveTMP.length=0;
-  h1HR.length=0; h1SPO.length=0; h1TMP.length=0;
-  h24HR.length=0; h24SPO.length=0; h24TMP.length=0;
-  rRawHR.length=0; rRawSPO.length=0; rRawTMP.length=0;
-  ['hr','spo2','temp'].forEach(k=>refreshChart(k));
-  showToast('Patient data reset ✓');
-}
-
-// ======= INIT =======
-renderPatientHeader();
-</script>
+  <script src="app.js"></script>
 </body>
 </html>
