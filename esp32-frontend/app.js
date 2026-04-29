@@ -472,21 +472,45 @@ async function saveModal() {
 async function resetPatientData() {
   const pid = currentPatientId || PAGE_PATIENT_ID;
   if (!pid) return;
-  if (!confirm(`Reset ALL sensor data for ${patientProfile.name || pid}?\nThis cannot be undone.`)) return;
+  if (!confirm(
+    `Full reset for ${patientProfile.name || pid}?\n\n` +
+    `This will permanently delete:\n` +
+    `  • All historical vitals\n` +
+    `  • All patient profile data (name, age, room, etc.)\n\n` +
+    `This cannot be undone.`
+  )) return;
+
   try {
-    const res = await fetch(`/api/patients/${encodeURIComponent(pid)}/data`, { method: "DELETE" });
-    const r   = await res.json();
-    // Clear charts
+    // 1. Delete all sensor/vitals data
+    const dataRes = await fetch(`/api/patients/${encodeURIComponent(pid)}/data`, { method: "DELETE" });
+    const dataR   = await dataRes.json();
+
+    // 2. Clear all profile fields (keeps device registration)
+    const profRes = await fetch(`/api/patients/${encodeURIComponent(pid)}/profile`, { method: "DELETE" });
+    if (!profRes.ok) throw new Error("Profile reset failed");
+    const resetProfile = await profRes.json();
+
+    // 3. Clear charts
     [hrChart, spo2Chart, tempChart].forEach(c => {
       if (!c) return;
       c.data.labels = []; c.data.datasets[0].data = []; c.update();
     });
-    // Clear buffers
+
+    // 4. Clear signal processing buffers and peaks
     hrBuf.length = 0; spo2Buf.length = 0; tempBuf.length = 0;
     peakHr = null; minSpo2 = null; peakTempF = null;
+
+    // 5. Clear alerts and insights panel
     activeAlerts.clear(); aiInsights = []; renderInsightsPanel();
-    alert(`Done — ${r.deleted || 0} records deleted.`);
-  } catch { alert("Reset failed. Check server connection."); }
+
+    // 6. Blank the profile UI — pass the reset profile back (has default name, no fields)
+    renderProfile(resetProfile);
+
+    alert(`Reset complete — ${dataR.deleted || 0} vitals records deleted and profile cleared.`);
+  } catch (e) {
+    console.error("[resetPatientData]", e);
+    alert("Reset failed. Check server connection.");
+  }
 }
 
 // ─── Dashboard poll (fallback when WebSocket misses a frame) ──────────────────

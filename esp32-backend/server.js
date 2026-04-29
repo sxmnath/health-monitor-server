@@ -355,13 +355,36 @@ app.get("/api/patients/:id/history", async (req, res) => {
 app.delete("/api/patients/:id/data", async (req, res) => {
   try {
     const result = await SensorData.deleteMany({ patient_id: req.params.id });
-    // Also clear the server-side moving-average window for this device
     const patient = await Patient.findOne({ patient_id: req.params.id }).lean();
     if (patient?.deviceId && deviceWindows[patient.deviceId]) {
       delete deviceWindows[patient.deviceId];
     }
     res.json({ deleted: result.deletedCount });
   } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── DELETE /api/patients/:id/profile ────────────────────────────────────────
+// Clear all profile fields — keeps the Patient document (device stays registered)
+const PROFILE_FIELDS = ["name","age","gender","bloodType","weight","height","roomNo","ward","physician","diagnosis","phone","notes"];
+app.delete("/api/patients/:id/profile", async (req, res) => {
+  try {
+    const unset = {};
+    PROFILE_FIELDS.forEach(k => { unset[k] = ""; });
+    // Reset name to default "Patient <N>" based on patient_id suffix
+    const patient = await Patient.findOne({ patient_id: req.params.id }).lean();
+    if (!patient) return res.status(404).json({ error: "Patient not found" });
+    const defaultName = `Patient ${parseInt(patient.patient_id.replace(/\D/g, ""), 10) - 100}`;
+    await Patient.updateOne(
+      { patient_id: req.params.id },
+      { $unset: { age:1, gender:1, bloodType:1, weight:1, height:1, roomNo:1, ward:1, physician:1, diagnosis:1, phone:1, notes:1 },
+        $set:   { name: defaultName } }
+    );
+    const updated = await Patient.findOne({ patient_id: req.params.id }).lean();
+    res.json(updated);
+  } catch (err) {
+    console.error("[DELETE /api/patients/:id/profile]", err);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -440,7 +463,6 @@ app.get("/api/patient-map", async (req, res) => {
 
 // ─── Routers ──────────────────────────────────────────────────────────────────
 // Note: /api/patients is now inline above; keep old route file only for legacy
-//app.use("/api", require("./routes/dashboard"));  // kept for any old reference
 
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 io.on("connection", (socket) => {
