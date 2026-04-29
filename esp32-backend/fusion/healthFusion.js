@@ -1,34 +1,31 @@
-function analyzeHealth(hr, spo2, temp) {
-  let status = [];
-  let riskScore = 0;
+// analyzeHealth — works with temperatureF (Fahrenheit)
+function analyzeHealth(hr, spo2, tempF) {
+  const indicators = [];
+  let riskScore    = 0;
 
-  // --- Stress ---
-  if (hr > 100 && spo2 >= 95 && temp < 37.5) {
-    status.push("Stress detected");
+  const spo2Connected = spo2 !== -1 && spo2 != null;
+
+  if (hr > 100 && spo2Connected && spo2 >= 95 && tempF < 100.4) {
+    indicators.push("Stress detected");
     riskScore += 2;
   }
-
-  // --- Fever ---
-  if (temp >= 37.8 && hr > 95) {
-    status.push("Fever risk");
+  if (tempF >= 100.4 && hr > 95) {
+    indicators.push("Fever risk");
     riskScore += 3;
   }
-
-  // --- Respiratory ---
-  if (spo2 < 92 && hr <= 100) {
-    status.push("Respiratory concern");
+  if (spo2Connected && spo2 < 92 && hr <= 100) {
+    indicators.push("Respiratory concern");
     riskScore += 4;
   }
-
-  // --- Normal ---
-  if (status.length === 0) {
-    status.push("Normal");
+  if (!spo2Connected) {
+    indicators.push("SpO₂ sensor disconnected");
+    riskScore += 1;
+  }
+  if (indicators.length === 0) {
+    indicators.push("Normal");
   }
 
-  return {
-    indicators: status,
-    riskScore
-  };
+  return { indicators, riskScore };
 }
 
 module.exports = analyzeHealth;

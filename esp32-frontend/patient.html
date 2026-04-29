@@ -7,183 +7,305 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+  <div class="app-layout">
 
-  <div class="bg-blob blob-1"></div>
-  <div class="bg-blob blob-2"></div>
+    <!-- ── Sidebar ─────────────────────────────────────────── -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <i class="fa-solid fa-heart-pulse"></i>
+        <span>MedMonitor</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/" class="nav-item"><i class="fa-solid fa-grid-2"></i> Ward Overview</a>
+        <a href="#" class="nav-item active"><i class="fa-solid fa-user-injured"></i> Patient</a>
+        <a href="#" class="nav-item"><i class="fa-solid fa-chart-line"></i> Analytics</a>
+      </nav>
+      <div class="sidebar-ws" id="wsIndicator">
+        <span class="ws-dot" id="wsDot"></span>
+        <span id="wsText">Connecting…</span>
+      </div>
+    </aside>
 
-  <div class="container">
+    <!-- ── Main Content ────────────────────────────────────── -->
+    <main class="main-content">
 
-    <!-- Patient Status Banner -->
-    <div id="patientBanner" class="patient-banner">
-      <span id="bannerIcon">🟢</span>
-      <span id="bannerText">Patient Stable</span>
+      <!-- Top bar -->
+      <div class="topbar">
+        <div class="breadcrumb-row">
+          <a href="/" class="back-link"><i class="fa-solid fa-chevron-left"></i> All Patients</a>
+          <i class="fa-solid fa-chevron-right bc-sep"></i>
+          <span id="bcPatientName" class="bc-current">Loading…</span>
+        </div>
+        <div class="topbar-meta">
+          <div class="live-badge" id="liveBadge">
+            <span class="live-dot"></span> Live
+          </div>
+          <span id="updated" class="updated-time">--</span>
+        </div>
+      </div>
+
+      <!-- Two-column layout -->
+      <div class="page-grid">
+
+        <!-- LEFT: Patient Info Panel -->
+        <aside class="info-panel">
+
+          <!-- Patient identity card -->
+          <div class="patient-id-card">
+            <div class="patient-avatar" id="patientAvatar">
+              <i class="fa-solid fa-user-nurse"></i>
+            </div>
+            <div class="patient-meta">
+              <h2 id="patientName">—</h2>
+              <div class="pid-row">
+                <span class="pid-tag" id="patientId">—</span>
+                <span class="status-pill" id="statusPill">—</span>
+              </div>
+            </div>
+            <button class="edit-btn" id="editBtn" title="Edit patient details">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+          </div>
+
+          <!-- Profile fields -->
+          <div class="profile-grid" id="profileGrid">
+            <div class="profile-field"><span class="pf-label">Room</span><span class="pf-val" id="pf-room">—</span></div>
+            <div class="profile-field"><span class="pf-label">Ward</span><span class="pf-val" id="pf-ward">—</span></div>
+            <div class="profile-field"><span class="pf-label">Age</span><span class="pf-val" id="pf-age">—</span></div>
+            <div class="profile-field"><span class="pf-label">Gender</span><span class="pf-val" id="pf-gender">—</span></div>
+            <div class="profile-field"><span class="pf-label">Blood Type</span><span class="pf-val" id="pf-blood">—</span></div>
+            <div class="profile-field"><span class="pf-label">Weight</span><span class="pf-val" id="pf-weight">—</span></div>
+            <div class="profile-field"><span class="pf-label">Height</span><span class="pf-val" id="pf-height">—</span></div>
+            <div class="profile-field profile-field-full"><span class="pf-label">Physician</span><span class="pf-val" id="pf-physician">—</span></div>
+            <div class="profile-field profile-field-full"><span class="pf-label">Diagnosis</span><span class="pf-val" id="pf-diagnosis">—</span></div>
+            <div class="profile-field profile-field-full"><span class="pf-label">Phone</span><span class="pf-val" id="pf-phone">—</span></div>
+            <div class="profile-field profile-field-full"><span class="pf-label">Notes</span><span class="pf-val" id="pf-notes">—</span></div>
+          </div>
+
+          <!-- Alerts -->
+          <div class="panel-section">
+            <div class="panel-section-header">
+              <h3><i class="fa-solid fa-triangle-exclamation"></i> Alerts <span class="alert-badge" id="alertBadge" style="display:none">0</span></h3>
+              <button class="clear-btn" id="clearAlertsBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="alertsList" class="alerts-list">
+              <div class="alert-empty" id="alertEmpty"><i class="fa-solid fa-circle-check"></i> All vitals normal</div>
+            </div>
+          </div>
+
+          <!-- AI Insights -->
+          <div class="panel-section">
+            <h3><i class="fa-solid fa-brain"></i> AI Insights</h3>
+            <div id="fusion" class="fusion-cards">
+              <div class="fusion-placeholder">Fetching insights…</div>
+            </div>
+          </div>
+
+        </aside>
+
+        <!-- RIGHT: Vitals + Charts -->
+        <section class="vitals-section">
+
+          <!-- Status banner -->
+          <div class="status-banner" id="statusBanner">
+            <i class="fa-solid fa-heart-pulse"></i>
+            <span id="statusLabel">Loading…</span>
+          </div>
+
+          <!-- Vitals cards -->
+          <div class="vitals-grid">
+
+            <div class="vital-card" id="card-hr">
+              <div class="vc-header">
+                <div class="vc-icon vc-icon-hr"><i class="fa-solid fa-heart-pulse"></i></div>
+                <div class="vc-label-group">
+                  <span class="vc-name">Heart Rate</span>
+                  <span class="vc-status" id="status-hr">—</span>
+                </div>
+              </div>
+              <div class="vc-value-row">
+                <span class="vc-value" id="hr">--</span>
+                <span class="vc-unit">bpm</span>
+              </div>
+              <div class="vc-bar-wrap"><div class="vc-bar vc-bar-hr" id="bar-hr"></div></div>
+              <div class="vc-peak-row"><span class="vc-peak-label">Peak</span><span id="peak-hr" class="vc-peak-val">--</span></div>
+            </div>
+
+            <div class="vital-card" id="card-spo2">
+              <div class="vc-header">
+                <div class="vc-icon vc-icon-spo2"><i class="fa-solid fa-lungs"></i></div>
+                <div class="vc-label-group">
+                  <span class="vc-name">Blood Oxygen</span>
+                  <span class="vc-status" id="status-spo2">—</span>
+                </div>
+              </div>
+              <div class="vc-value-row">
+                <span class="vc-value" id="spo2">--</span>
+                <span class="vc-unit">% SpO₂</span>
+              </div>
+              <div class="vc-bar-wrap"><div class="vc-bar vc-bar-spo2" id="bar-spo2"></div></div>
+              <div class="vc-peak-row"><span class="vc-peak-label">Min</span><span id="peak-spo2" class="vc-peak-val">--</span></div>
+            </div>
+
+            <div class="vital-card" id="card-temp">
+              <div class="vc-header">
+                <div class="vc-icon vc-icon-temp"><i class="fa-solid fa-temperature-half"></i></div>
+                <div class="vc-label-group">
+                  <span class="vc-name">Temperature</span>
+                  <span class="vc-status" id="status-temp">—</span>
+                </div>
+              </div>
+              <div class="vc-value-row">
+                <span class="vc-value" id="temp">--</span>
+                <span class="vc-unit">°F</span>
+              </div>
+              <div class="vc-bar-wrap"><div class="vc-bar vc-bar-temp" id="bar-temp"></div></div>
+              <div class="vc-peak-row"><span class="vc-peak-label">Peak</span><span id="peak-temp" class="vc-peak-val">--</span></div>
+            </div>
+
+          </div>
+
+          <!-- Charts -->
+          <div class="charts-panel">
+            <div class="charts-header">
+              <h3><i class="fa-solid fa-chart-area"></i> Trend Analysis</h3>
+              <div class="time-filters">
+                <button class="filter-btn active" data-filter="live">Live</button>
+                <button class="filter-btn" data-filter="1h">1 Hour</button>
+                <button class="filter-btn" data-filter="24h">24 Hours</button>
+              </div>
+            </div>
+
+            <!-- Loading / empty state messages -->
+            <div id="chartLoadingMsg" style="display:none;align-items:center;justify-content:center;gap:10px;padding:20px;color:#9b96a8;font-size:0.88rem;">
+              <i class="fa-solid fa-spinner fa-spin"></i> Loading historical data…
+            </div>
+            <div id="chartEmptyMsg" style="display:none;padding:16px;color:#9b96a8;font-size:0.85rem;text-align:center;background:#faf8f4;border-radius:10px;border:1px dashed #e8e2d8;"></div>
+
+            <div class="chart-card chart-hr">
+              <div class="chart-label">
+                <span class="chart-dot" style="background:#ef4444"></span>
+                <span class="chart-name">Heart Rate</span>
+                <span class="chart-unit">beats per minute (bpm)</span>
+              </div>
+              <div class="chart-wrap"><canvas id="hrChart"></canvas></div>
+            </div>
+
+            <div class="chart-card chart-spo2">
+              <div class="chart-label">
+                <span class="chart-dot" style="background:#0891b2"></span>
+                <span class="chart-name">Blood Oxygen SpO₂</span>
+                <span class="chart-unit">saturation (%)</span>
+              </div>
+              <div class="chart-wrap"><canvas id="spo2Chart"></canvas></div>
+            </div>
+
+            <div class="chart-card chart-temp">
+              <div class="chart-label">
+                <span class="chart-dot" style="background:#d97706"></span>
+                <span class="chart-name">Body Temperature</span>
+                <span class="chart-unit">degrees Fahrenheit (°F)</span>
+              </div>
+              <div class="chart-wrap"><canvas id="tempChart"></canvas></div>
+            </div>
+
+          </div>
+
+          <!-- Footer actions -->
+          <div class="action-footer">
+            <span class="footer-note"><i class="fa-regular fa-clock"></i> <span id="footerUpdated">--</span></span>
+            <button class="reset-btn" id="resetDataBtn">
+              <i class="fa-solid fa-rotate-left"></i> Reset All Data
+            </button>
+          </div>
+
+        </section>
+      </div><!-- /page-grid -->
+    </main>
+  </div><!-- /app-layout -->
+
+  <!-- ── Edit Patient Modal ──────────────────────────────── -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-pen"></i> Edit Patient Details</h2>
+        <button class="modal-close" id="modalClose"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group form-full">
+            <label>Full Name</label>
+            <input type="text" id="f-name" placeholder="e.g. John Doe">
+          </div>
+          <div class="form-group">
+            <label>Age</label>
+            <input type="number" id="f-age" placeholder="e.g. 45" min="0" max="150">
+          </div>
+          <div class="form-group">
+            <label>Gender</label>
+            <select id="f-gender">
+              <option value="">— Select —</option>
+              <option>Male</option>
+              <option>Female</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Blood Type</label>
+            <select id="f-bloodType">
+              <option value="">— Select —</option>
+              <option>A+</option><option>A-</option>
+              <option>B+</option><option>B-</option>
+              <option>AB+</option><option>AB-</option>
+              <option>O+</option><option>O-</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Weight (kg)</label>
+            <input type="number" id="f-weight" placeholder="e.g. 72" min="0">
+          </div>
+          <div class="form-group">
+            <label>Height (cm)</label>
+            <input type="number" id="f-height" placeholder="e.g. 175" min="0">
+          </div>
+          <div class="form-group">
+            <label>Room No.</label>
+            <input type="text" id="f-roomNo" placeholder="e.g. 4B">
+          </div>
+          <div class="form-group">
+            <label>Ward</label>
+            <input type="text" id="f-ward" placeholder="e.g. ICU">
+          </div>
+          <div class="form-group form-full">
+            <label>Attending Physician</label>
+            <input type="text" id="f-physician" placeholder="e.g. Dr. Smith">
+          </div>
+          <div class="form-group form-full">
+            <label>Diagnosis</label>
+            <input type="text" id="f-diagnosis" placeholder="e.g. Acute MI">
+          </div>
+          <div class="form-group form-full">
+            <label>Phone / Emergency Contact</label>
+            <input type="text" id="f-phone" placeholder="e.g. +1 555-0123">
+          </div>
+          <div class="form-group form-full">
+            <label>Notes</label>
+            <textarea id="f-notes" rows="3" placeholder="Additional notes…"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="modalCancel">Cancel</button>
+        <button class="btn-save" id="modalSave"><i class="fa-solid fa-check"></i> Save Changes</button>
+      </div>
     </div>
-
-    <!-- Back to Ward -->
-    <nav class="breadcrumb">
-      <a href="/" class="back-link"><i class="fa-solid fa-chevron-left"></i> Ward Overview</a>
-    </nav>
-
-    <!-- Header -->
-    <header class="header">
-      <div class="header-content">
-        <h1 id="patientName">Health Monitor</h1>
-        <span class="subtitle">Real-time Vital Signs</span>
-      </div>
-      <div class="pulse-indicator" id="wsIndicator">
-        <span class="dot" id="wsDot"></span>
-        <span class="status-text" id="wsText">Connecting...</span>
-      </div>
-    </header>
-
-    <!-- Overall Status -->
-    <section id="statusCard" class="card status-card">
-      <div class="status-icon"><i class="fa-solid fa-heart-pulse"></i></div>
-      <div class="status-info">
-        <h3>Current Status</h3>
-        <p id="status-label">Loading...</p>
-      </div>
-    </section>
-
-    <!-- Vitals -->
-    <section class="vitals-grid">
-      <div class="card vital-card interactive" id="card-hr">
-        <div class="vital-header">
-          <div class="vital-title">
-            <i class="fa-solid fa-heart-pulse icon-hr"></i>
-            <span class="label">Heart Rate</span>
-          </div>
-          <div class="vital-status" id="status-hr">--</div>
-        </div>
-        <div class="vital-body">
-          <span id="hr" class="value">--</span><span class="unit"> bpm</span>
-        </div>
-        <div class="progress-bar-container">
-          <div class="progress-bar" id="bar-hr"></div>
-        </div>
-      </div>
-      <div class="card vital-card interactive" id="card-spo2">
-        <div class="vital-header">
-          <div class="vital-title">
-            <i class="fa-solid fa-lungs icon-spo2"></i>
-            <span class="label">SpO₂</span>
-          </div>
-          <div class="vital-status" id="status-spo2">--</div>
-        </div>
-        <div class="vital-body">
-          <span id="spo2" class="value">--</span><span class="unit"> %</span>
-        </div>
-        <div class="progress-bar-container">
-          <div class="progress-bar" id="bar-spo2"></div>
-        </div>
-      </div>
-      <div class="card vital-card interactive" id="card-temp">
-        <div class="vital-header">
-          <div class="vital-title">
-            <i class="fa-solid fa-temperature-half icon-temp\"></i>
-            <span class="label">Temperature</span>
-          </div>
-          <div class="vital-status" id="status-temp">--</div>
-        </div>
-        <div class="vital-body">
-          <span id="temp" class="value">--</span><span class="unit"> °C</span>
-        </div>
-        <div class="progress-bar-container">
-          <div class="progress-bar" id="bar-temp"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Alerts -->
-    <section class="alerts-section" id="alertsSection">
-      <div class="alerts-header">
-        <h2 class="section-title">
-          <i class="fa-solid fa-triangle-exclamation"></i> Alerts
-          <span class="alert-badge" id="alertBadge" style="display:none">0</span>
-        </h2>
-        <button class="clear-btn" id="clearAlertsBtn" title="Clear all alerts">
-          <i class="fa-solid fa-xmark"></i> Clear all
-        </button>
-      </div>
-      <div id="alertsList" class="alerts-list">
-        <div class="alert-empty" id="alertEmpty">
-          <i class="fa-solid fa-circle-check"></i>
-          All vitals are within normal range
-        </div>
-      </div>
-    </section>
-
-    <!-- Charts -->
-    <section class="charts-section">
-      <div class="charts-header">
-        <h2 class="section-title"><i class="fa-solid fa-chart-line"></i> Trend Analysis</h2>
-        <div class="time-filters">
-          <button class="filter-btn active" data-filter="live">Live</button>
-          <button class="filter-btn" data-filter="3600">Last 1 hour</button>
-          <button class="filter-btn" data-filter="86400">Last 24 hours</button>
-        </div>
-      </div>
-      <div class="charts-grid">
-
-        <div class="chart-card chart-hr">
-          <div class="chart-label">
-            <i class="fa-solid fa-heart-pulse" style="color:#ef4444;font-size:0.9rem"></i>
-            <span class="chart-label-text">Heart Rate</span>
-            <span class="chart-label-unit">— beats per minute (bpm)</span>
-          </div>
-          <div class="chart-canvas-wrap">
-            <canvas id="hrChart"></canvas>
-          </div>
-        </div>
-
-        <div class="chart-card chart-spo2">
-          <div class="chart-label">
-            <i class="fa-solid fa-lungs" style="color:#0891b2;font-size:0.9rem"></i>
-            <span class="chart-label-text">Blood Oxygen (SpO₂)</span>
-            <span class="chart-label-unit">— saturation (%)</span>
-          </div>
-          <div class="chart-canvas-wrap">
-            <canvas id="spo2Chart"></canvas>
-          </div>
-        </div>
-
-        <div class="chart-card chart-temp">
-          <div class="chart-label">
-            <i class="fa-solid fa-temperature-half" style="color:#d97706;font-size:0.9rem"></i>
-            <span class="chart-label-text">Body Temperature</span>
-            <span class="chart-label-unit">— degrees Celsius (°C)</span>
-          </div>
-          <div class="chart-canvas-wrap">
-            <canvas id="tempChart"></canvas>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- AI Insights -->
-    <section class="fusion-section">
-      <h2 class="section-title"><i class="fa-solid fa-brain"></i> AI Health Insights</h2>
-      <div id="fusion" class="fusion-cards">
-        <div class="card empty-state">Fetching real-time insights...</div>
-      </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <div class="footer-info">
-        <i class="fa-regular fa-clock"></i>
-        <span id="updated">Last updated: --</span>
-      </div>
-    </footer>
-
   </div>
 
   <script src="app.js"></script>
