@@ -89,22 +89,14 @@
             <div class="profile-field profile-field-full"><span class="pf-label">Notes</span><span class="pf-val" id="pf-notes">—</span></div>
           </div>
 
-          <!-- Alerts -->
+          <!-- AI Alerts & Insights — unified -->
           <div class="panel-section">
             <div class="panel-section-header">
-              <h3><i class="fa-solid fa-triangle-exclamation"></i> Alerts <span class="alert-badge" id="alertBadge" style="display:none">0</span></h3>
-              <button class="clear-btn" id="clearAlertsBtn"><i class="fa-solid fa-xmark"></i></button>
+              <h3><i class="fa-solid fa-brain"></i> AI Alerts &amp; Insights <span class="alert-badge" id="alertBadge" style="display:none">0</span></h3>
+              <button class="clear-btn" id="clearAlertsBtn" title="Dismiss all alerts"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div id="alertsList" class="alerts-list">
-              <div class="alert-empty" id="alertEmpty"><i class="fa-solid fa-circle-check"></i> All vitals normal</div>
-            </div>
-          </div>
-
-          <!-- AI Insights -->
-          <div class="panel-section">
-            <h3><i class="fa-solid fa-brain"></i> AI Insights</h3>
-            <div id="fusion" class="fusion-cards">
-              <div class="fusion-placeholder">Fetching insights…</div>
+            <div id="insightsList" class="alerts-list">
+              <div class="alert-empty"><i class="fa-solid fa-circle-check"></i> All vitals normal</div>
             </div>
           </div>
 

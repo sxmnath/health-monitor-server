@@ -110,7 +110,7 @@ function renderVitals(raw, time) {
 
   if (spo2v === -1) {
     if (spo2ValEl) spo2ValEl.innerText = "—";
-    if (spo2Stat)  { spo2Stat.innerHTML = '<i class="fa-solid fa-plug-circle-xmark"></i> Not Connected'; spo2Stat.className = "vc-status status-disconnected"; }
+    if (spo2Stat)  { spo2Stat.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> Place finger on sensor'; spo2Stat.className = "vc-status status-disconnected"; }
     if (spo2Card)  spo2Card.className   = "vital-card card-disconnected";
     if (spo2Bar)   spo2Bar.style.width  = "0%";
     if (spo2Pk)    spo2Pk.innerText     = "—";
@@ -171,54 +171,89 @@ function renderVitals(raw, time) {
   generateAlerts({ heartRate: hr, spo2: spo2v, temperatureF: tempF });
 }
 
-// ─── Alert Engine ─────────────────────────────────────────────────────────────
-const activeAlerts = new Map();
+// ─── AI Alerts & Insights — unified engine ────────────────────────────────────
+const activeAlerts = new Map();   // keyed vital alerts (real-time, dismissable)
+let   aiInsights   = [];          // latest AI indicator strings from fusion
+
 const ALERT_RULES = [
-  { key: "hr_low",    check: v => v.heartRate != null && v.heartRate < 50,                                         severity: "critical", icon: "fa-heart-crack",       title: "Bradycardia Detected",      detail: v => `Heart rate ${v.heartRate} bpm (threshold: <50)` },
-  { key: "hr_crit",   check: v => v.heartRate != null && v.heartRate > 120,                                        severity: "critical", icon: "fa-heart-crack",       title: "Critical Tachycardia",      detail: v => `Heart rate ${v.heartRate} bpm (threshold: >120)` },
-  { key: "hr_warn",   check: v => v.heartRate != null && v.heartRate > 100 && v.heartRate <= 120,                  severity: "warning",  icon: "fa-heart-pulse",       title: "Elevated Heart Rate",       detail: v => `Heart rate ${v.heartRate} bpm (normal: 50–100)` },
-  { key: "spo2_nc",   check: v => v.spo2 === -1,                                                                   severity: "warning",  icon: "fa-plug-circle-xmark", title: "SpO₂ Sensor Not Connected", detail: () => "Blood oxygen sensor is disconnected" },
-  { key: "spo2_crit", check: v => v.spo2 !== -1 && v.spo2 != null && v.spo2 < 92,                                 severity: "critical", icon: "fa-lungs",             title: "Critical Low SpO₂",         detail: v => `SpO₂ ${v.spo2}% (critical: <92%)` },
-  { key: "spo2_warn", check: v => v.spo2 !== -1 && v.spo2 != null && v.spo2 >= 92 && v.spo2 <= 95,               severity: "warning",  icon: "fa-lungs",             title: "SpO₂ Slightly Low",         detail: v => `SpO₂ ${v.spo2}% (borderline: 92–95%)` },
-  { key: "temp_crit", check: v => v.temperatureF != null && v.temperatureF > 102,                                  severity: "critical", icon: "fa-temperature-full",  title: "High Fever",                detail: v => `Temp ${v.temperatureF}°F (critical: >102°F)` },
-  { key: "temp_warn", check: v => v.temperatureF != null && v.temperatureF >= 100.4 && v.temperatureF <= 102,     severity: "warning",  icon: "fa-temperature-half",  title: "Mild Fever",                detail: v => `Temp ${v.temperatureF}°F (mild: 100.4–102°F)` },
+  { key: "hr_low",    check: v => v.heartRate != null && v.heartRate < 50,                                      severity: "critical", icon: "fa-heart-crack",      title: "Bradycardia Detected",   detail: v => `Heart rate ${v.heartRate} bpm (threshold: <50 bpm)` },
+  { key: "hr_crit",   check: v => v.heartRate != null && v.heartRate > 120,                                     severity: "critical", icon: "fa-heart-crack",      title: "Critical Tachycardia",   detail: v => `Heart rate ${v.heartRate} bpm (threshold: >120 bpm)` },
+  { key: "hr_warn",   check: v => v.heartRate != null && v.heartRate > 100 && v.heartRate <= 120,               severity: "warning",  icon: "fa-heart-pulse",      title: "Elevated Heart Rate",    detail: v => `Heart rate ${v.heartRate} bpm (normal: 50–100 bpm)` },
+  { key: "spo2_nc",   check: v => v.spo2 === -1,                                                                severity: "warning",  icon: "fa-hand-pointer",     title: "SpO₂ Sensor",            detail: () => "Please place finger on the sensor" },
+  { key: "spo2_crit", check: v => v.spo2 !== -1 && v.spo2 != null && v.spo2 < 92,                              severity: "critical", icon: "fa-lungs",            title: "Critical Low SpO₂",      detail: v => `SpO₂ ${v.spo2}% (critical: <92%)` },
+  { key: "spo2_warn", check: v => v.spo2 !== -1 && v.spo2 != null && v.spo2 >= 92 && v.spo2 <= 95,            severity: "warning",  icon: "fa-lungs",            title: "SpO₂ Slightly Low",      detail: v => `SpO₂ ${v.spo2}% (borderline: 92–95%)` },
+  { key: "temp_crit", check: v => v.temperatureF != null && v.temperatureF > 102,                               severity: "critical", icon: "fa-temperature-full", title: "High Fever",             detail: v => `Temp ${v.temperatureF}°F (critical: >102°F)` },
+  { key: "temp_warn", check: v => v.temperatureF != null && v.temperatureF >= 100.4 && v.temperatureF <= 102,  severity: "warning",  icon: "fa-temperature-half", title: "Mild Fever",             detail: v => `Temp ${v.temperatureF}°F (mild: 100.4–102°F)` },
 ];
 
+// Update active alerts from latest vitals, then re-render unified panel
 function generateAlerts(vitals) {
   const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   ALERT_RULES.forEach(r => {
     if (r.check(vitals)) {
-      if (!activeAlerts.has(r.key)) activeAlerts.set(r.key, { severity: r.severity, icon: r.icon, title: r.title, detail: r.detail(vitals), time: now });
+      if (!activeAlerts.has(r.key))
+        activeAlerts.set(r.key, { severity: r.severity, icon: r.icon, title: r.title, detail: r.detail(vitals), time: now });
     } else {
       activeAlerts.delete(r.key);
     }
   });
-  renderAlertPanel();
+  renderInsightsPanel();
 }
 
-function renderAlertPanel() {
-  const list  = document.getElementById("alertsList");
+// Update AI insight strings then re-render
+function updateAIInsights(indicators) {
+  if (!indicators || !indicators.length) return;
+  aiInsights = indicators;
+  renderInsightsPanel();
+}
+
+// ── Unified render: alerts first (dismissable), then AI insights below ────────
+function renderInsightsPanel() {
+  const list  = document.getElementById("insightsList");
   const badge = document.getElementById("alertBadge");
   if (!list) return;
-  const count = activeAlerts.size;
-  if (badge) { badge.textContent = count; badge.style.display = count > 0 ? "inline-flex" : "none"; }
+
+  const alertCount = activeAlerts.size;
+  if (badge) { badge.textContent = alertCount; badge.style.display = alertCount > 0 ? "inline-flex" : "none"; }
+
   list.innerHTML = "";
-  if (count === 0) {
-    list.innerHTML = `<div class="alert-empty"><i class="fa-solid fa-circle-check"></i> All vitals normal</div>`;
-    return;
+
+  // ── Active vital alerts (dismissable) ──────────────────────────────────────
+  if (alertCount === 0) {
+    const ok = document.createElement("div");
+    ok.className = "alert-empty";
+    ok.innerHTML = `<i class="fa-solid fa-circle-check"></i> All vitals normal`;
+    list.appendChild(ok);
+  } else {
+    let delay = 0;
+    activeAlerts.forEach((a, key) => {
+      const div = document.createElement("div");
+      div.className = `alert-item alert-${a.severity}`;
+      div.style.animationDelay = `${delay}ms`;
+      div.innerHTML = `<i class="fa-solid ${a.icon} alert-icon"></i><div class="alert-body"><div class="alert-title">${a.title}</div><div class="alert-detail">${a.detail}</div></div><span class="alert-time">${a.time}</span><button class="alert-dismiss" onclick="dismissAlert('${key}')"><i class="fa-solid fa-xmark"></i></button>`;
+      list.appendChild(div);
+      delay += 60;
+    });
   }
-  let delay = 0;
-  activeAlerts.forEach((a, key) => {
-    const div = document.createElement("div");
-    div.className = `alert-item alert-${a.severity}`;
-    div.style.animationDelay = `${delay}ms`;
-    div.innerHTML = `<i class="fa-solid ${a.icon} alert-icon"></i><div class="alert-body"><div class="alert-title">${a.title}</div><div class="alert-detail">${a.detail}</div></div><span class="alert-time">${a.time}</span><button class="alert-dismiss" onclick="dismissAlert('${key}')"><i class="fa-solid fa-xmark"></i></button>`;
-    list.appendChild(div);
-    delay += 60;
-  });
+
+  // ── AI insights (informational, not dismissable) ───────────────────────────
+  if (aiInsights.length && !(aiInsights.length === 1 && aiInsights[0] === "Normal")) {
+    const divider = document.createElement("div");
+    divider.className = "insights-divider";
+    divider.innerHTML = `<span>AI Analysis</span>`;
+    list.appendChild(divider);
+
+    aiInsights.forEach((indicator, idx) => {
+      const div = document.createElement("div");
+      div.className = "fusion-item";
+      div.style.animationDelay = `${idx * 60}ms`;
+      div.innerHTML = `<i class="fa-solid fa-brain"></i><div class="fusion-item-content"><h4>${indicator}</h4><p>${AI_NOTES[indicator] || ""}</p></div>`;
+      list.appendChild(div);
+    });
+  }
 }
 
-function dismissAlert(key) { activeAlerts.delete(key); renderAlertPanel(); }
+function dismissAlert(key) { activeAlerts.delete(key); renderInsightsPanel(); }
 
 // ─── Charts ────────────────────────────────────────────────────────────────────
 function makeChartOpts({ yLabel, yMin, yMax, color, tickSuffix }) {
@@ -265,8 +300,38 @@ function initCharts() {
   tempChart = mk("tempChart", "Temperature", "#e0963c", { yLabel: "°F",  yMin: 90,  yMax: 104, tickSuffix: "°F"   });
 }
 
+// Append a single new data point to whichever historical chart is active.
+// This keeps both the 1h and 24h charts live without re-fetching all data.
+function appendToActiveChart(time, hr, spo2, tempF) {
+  const label = new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const longLabel = new Date(time).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  const chartLabel = currentFilter === "1h" ? label : longLabel;
+
+  [
+    { c: hrChart,   v: hr   },
+    { c: spo2Chart, v: spo2 === -1 ? null : spo2 },
+    { c: tempChart, v: tempF },
+  ].forEach(({ c, v }) => {
+    if (!c) return;
+    c.data.labels.push(chartLabel);
+    c.data.datasets[0].data.push(v ?? null);
+
+    // Trim old points that fall outside the current window
+    const windowMs = currentFilter === "1h" ? 3600000 : 86400000;
+    while (c.data.labels.length > 0) {
+      // Estimate: keep at most windowMs worth of points (assume ~5s per point)
+      const maxPoints = currentFilter === "1h" ? 720 : 17280;
+      if (c.data.labels.length > maxPoints) {
+        c.data.labels.shift();
+        c.data.datasets[0].data.shift();
+      } else break;
+    }
+    c.update("none");
+  });
+}
+
 function updateLiveCharts() {
-  // Live chart removed — only 1h and 24h historical views are shown.
+  // (kept as no-op stub — live appending is handled by appendToActiveChart)
 }
 
 // ─── Historical Data — THE FIX ────────────────────────────────────────────────
@@ -419,7 +484,7 @@ async function resetPatientData() {
     // Clear buffers
     hrBuf.length = 0; spo2Buf.length = 0; tempBuf.length = 0;
     peakHr = null; minSpo2 = null; peakTempF = null;
-    activeAlerts.clear(); renderAlertPanel();
+    activeAlerts.clear(); aiInsights = []; renderInsightsPanel();
     alert(`Done — ${r.deleted || 0} records deleted.`);
   } catch { alert("Reset failed. Check server connection."); }
 }
@@ -438,19 +503,8 @@ async function loadDashboard() {
       renderProfile({ ...data, patient_id: currentPatientId });
     }
 
-    // AI Insights
-    if (data.fusion?.indicators) {
-      const fusionEl = document.getElementById("fusion");
-      if (fusionEl) {
-        fusionEl.innerHTML = "";
-        data.fusion.indicators.forEach(i => {
-          const d = document.createElement("div");
-          d.className = "fusion-item";
-          d.innerHTML = `<i class="fa-solid fa-brain"></i><div class="fusion-item-content"><h4>${i}</h4><p>${AI_NOTES[i] || ""}</p></div>`;
-          fusionEl.appendChild(d);
-        });
-      }
-    }
+    // AI Insights → merged panel
+    if (data.fusion?.indicators) updateAIInsights(data.fusion.indicators);
 
     // data.vitals now uses temperatureF from the new server
     renderVitals(data.vitals, data.time);
@@ -474,23 +528,15 @@ document.addEventListener("DOMContentLoaded", () => {
     currentDeviceId  = doc.deviceId;
     currentPatientId = doc.patient_id || PAGE_PATIENT_ID;
     // doc now has temperatureF directly from server
+    const vTime = doc.time || new Date();
     renderVitals(
       { heartRate: doc.heartRate, spo2: doc.spo2, temperatureF: doc.temperatureF, isPeak: doc.isPeak },
-      doc.time || new Date()
+      vTime
     );
-    // AI insights
-    if (doc.fusion?.indicators) {
-      const fusionEl = document.getElementById("fusion");
-      if (fusionEl) {
-        fusionEl.innerHTML = "";
-        doc.fusion.indicators.forEach(i => {
-          const d = document.createElement("div");
-          d.className = "fusion-item";
-          d.innerHTML = `<i class="fa-solid fa-brain"></i><div class="fusion-item-content"><h4>${i}</h4><p>${AI_NOTES[i] || ""}</p></div>`;
-          fusionEl.appendChild(d);
-        });
-      }
-    }
+    // Append new point to the active historical chart in real time
+    appendToActiveChart(vTime, doc.heartRate, doc.spo2, doc.temperatureF);
+    // AI insights → merged panel
+    if (doc.fusion?.indicators) updateAIInsights(doc.fusion.indicators);
   });
 
   // Poll fallback every 5s
@@ -499,7 +545,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Alerts
   document.getElementById("clearAlertsBtn")?.addEventListener("click", () => {
-    activeAlerts.clear(); renderAlertPanel();
+    activeAlerts.clear(); renderInsightsPanel();
   });
 
   // Time filter buttons (1h / 24h only)
