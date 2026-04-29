@@ -11,7 +11,7 @@ const API = PAGE_PATIENT_ID
   : "/api/dashboard";
 
 let hrChart, spo2Chart, tempChart;
-let currentFilter    = "live";
+let currentFilter    = "1h";
 let currentPatientId = PAGE_PATIENT_ID;
 let currentDeviceId  = null;
 
@@ -265,15 +265,8 @@ function initCharts() {
   tempChart = mk("tempChart", "Temperature", "#e0963c", { yLabel: "°F",  yMin: 90,  yMax: 104, tickSuffix: "°F"   });
 }
 
-function updateLiveCharts(label, hr, spo2, tempF, isPeak) {
-  if (currentFilter !== "live") return;
-  [{ c: hrChart, v: hr }, { c: spo2Chart, v: spo2 }, { c: tempChart, v: tempF }].forEach(({ c, v }) => {
-    if (!c) return;
-    c.data.labels.push(label);
-    c.data.datasets[0].data.push(v ?? null);
-    if (c.data.labels.length > 120) { c.data.labels.shift(); c.data.datasets[0].data.shift(); }
-    c.update("none");
-  });
+function updateLiveCharts() {
+  // Live chart removed — only 1h and 24h historical views are shown.
 }
 
 // ─── Historical Data — THE FIX ────────────────────────────────────────────────
@@ -509,25 +502,20 @@ document.addEventListener("DOMContentLoaded", () => {
     activeAlerts.clear(); renderAlertPanel();
   });
 
-  // Time filter buttons
+  // Time filter buttons (1h / 24h only)
   document.querySelectorAll(".filter-btn").forEach(btn => {
     btn.addEventListener("click", e => {
       document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
       e.currentTarget.classList.add("active");
       currentFilter = e.currentTarget.dataset.filter;
-
       const emptyEl = document.getElementById("chartEmptyMsg");
       if (emptyEl) emptyEl.style.display = "none";
-
-      if (currentFilter === "live") {
-        [hrChart, spo2Chart, tempChart].forEach(c => {
-          if (!c) return; c.data.labels = []; c.data.datasets[0].data = []; c.update();
-        });
-      } else {
-        fetchHistoricalData(currentFilter);  // "1h" or "24h"
-      }
+      fetchHistoricalData(currentFilter);  // "1h" or "24h"
     });
   });
+
+  // Auto-load 1h on page open
+  fetchHistoricalData("1h");
 
   // Edit modal
   document.getElementById("editBtn")?.addEventListener("click", openEditModal);
