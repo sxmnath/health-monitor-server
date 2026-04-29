@@ -17,20 +17,24 @@
   <div class="app-layout">
 
     <!-- ── Sidebar ─────────────────────────────────────────── -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo">
-        <i class="fa-solid fa-heart-pulse"></i>
-        <span>MedMonitor</span>
+        <button class="sidebar-collapse-btn" id="sidebarToggle" title="Collapse sidebar">
+          <i class="fa-solid fa-heart-pulse logo-icon"></i>
+          <span class="logo-text">MedMonitor</span>
+          <i class="fa-solid fa-chevron-left collapse-arrow"></i>
+        </button>
       </div>
       <nav class="sidebar-nav">
-        <a href="/" class="nav-item"><i class="fa-solid fa-grid-2"></i> Ward Overview</a>
-        <a href="#" class="nav-item active"><i class="fa-solid fa-user-injured"></i> Patient</a>
-        <a href="#" class="nav-item"><i class="fa-solid fa-chart-line"></i> Analytics</a>
+        <a href="/" class="nav-item" title="Ward Overview">
+          <i class="fa-solid fa-building-columns"></i>
+          <span>Ward Overview</span>
+        </a>
+        <a href="#" class="nav-item active" title="Patient">
+          <i class="fa-solid fa-user-injured"></i>
+          <span>Patient</span>
+        </a>
       </nav>
-      <div class="sidebar-ws" id="wsIndicator">
-        <span class="ws-dot" id="wsDot"></span>
-        <span id="wsText">Connecting…</span>
-      </div>
     </aside>
 
     <!-- ── Main Content ────────────────────────────────────── -->
@@ -74,19 +78,38 @@
             </button>
           </div>
 
-          <!-- Profile fields -->
-          <div class="profile-grid" id="profileGrid">
+          <!-- Location row -->
+          <div class="profile-grid">
             <div class="profile-field"><span class="pf-label">Room</span><span class="pf-val" id="pf-room">—</span></div>
             <div class="profile-field"><span class="pf-label">Ward</span><span class="pf-val" id="pf-ward">—</span></div>
-            <div class="profile-field"><span class="pf-label">Age</span><span class="pf-val" id="pf-age">—</span></div>
-            <div class="profile-field"><span class="pf-label">Gender</span><span class="pf-val" id="pf-gender">—</span></div>
-            <div class="profile-field"><span class="pf-label">Blood Type</span><span class="pf-val" id="pf-blood">—</span></div>
-            <div class="profile-field"><span class="pf-label">Weight</span><span class="pf-val" id="pf-weight">—</span></div>
-            <div class="profile-field"><span class="pf-label">Height</span><span class="pf-val" id="pf-height">—</span></div>
-            <div class="profile-field profile-field-full"><span class="pf-label">Physician</span><span class="pf-val" id="pf-physician">—</span></div>
-            <div class="profile-field profile-field-full"><span class="pf-label">Diagnosis</span><span class="pf-val" id="pf-diagnosis">—</span></div>
-            <div class="profile-field profile-field-full"><span class="pf-label">Phone</span><span class="pf-val" id="pf-phone">—</span></div>
-            <div class="profile-field profile-field-full"><span class="pf-label">Notes</span><span class="pf-val" id="pf-notes">—</span></div>
+          </div>
+
+          <!-- Patient Specs (bio data 2-col grid) -->
+          <div class="panel-section">
+            <h3><i class="fa-solid fa-id-card"></i> Patient Specs</h3>
+            <div class="profile-grid">
+              <div class="profile-field"><span class="pf-label">Age</span><span class="pf-val" id="pf-age">—</span></div>
+              <div class="profile-field"><span class="pf-label">Gender</span><span class="pf-val" id="pf-gender">—</span></div>
+              <div class="profile-field"><span class="pf-label">Blood Type</span><span class="pf-val" id="pf-blood">—</span></div>
+              <div class="profile-field"><span class="pf-label">Weight</span><span class="pf-val" id="pf-weight">—</span></div>
+              <div class="profile-field profile-field-full"><span class="pf-label">Height</span><span class="pf-val" id="pf-height">—</span></div>
+              <div class="profile-field profile-field-full"><span class="pf-label">Diagnosis</span><span class="pf-val" id="pf-diagnosis">—</span></div>
+            </div>
+          </div>
+
+          <!-- Notes (amber highlight) -->
+          <div class="notes-field" id="notesField">
+            <div class="notes-field-header"><i class="fa-solid fa-circle-info"></i> Clinical Notes</div>
+            <span class="pf-val" id="pf-notes">—</span>
+          </div>
+
+          <!-- Administration (secondary tier) -->
+          <div class="panel-section admin-section">
+            <h3><i class="fa-solid fa-address-book"></i> Administration</h3>
+            <div class="profile-grid">
+              <div class="profile-field profile-field-full"><span class="pf-label">Physician</span><span class="pf-val" id="pf-physician">—</span></div>
+              <div class="profile-field profile-field-full"><span class="pf-label">Phone / Emergency</span><span class="pf-val" id="pf-phone">—</span></div>
+            </div>
           </div>
 
           <!-- AI Alerts & Insights — unified -->
@@ -182,7 +205,7 @@
 
             <div class="chart-card chart-hr">
               <div class="chart-label">
-                <span class="chart-dot" style="background:#ef4444"></span>
+                <span class="chart-dot" id="hrChartDot" style="background:#5b8dee"></span>
                 <span class="chart-name">Heart Rate</span>
                 <span class="chart-unit">beats per minute (bpm)</span>
               </div>

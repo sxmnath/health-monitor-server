@@ -93,17 +93,30 @@ body {
 }
 
 .sidebar-logo {
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding-bottom: 4px;
+}
+
+.sidebar-collapse-btn {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 20px 24px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  font-size: 1.15rem;
-  font-weight: 700;
+  padding: 16px 20px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
   color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: var(--font);
   letter-spacing: -0.01em;
+  transition: background 0.15s;
 }
-.sidebar-logo i { color: var(--sidebar-accent); font-size: 1.25rem; }
+.sidebar-collapse-btn:hover { background: rgba(255,255,255,0.05); }
+.logo-icon   { color: var(--sidebar-accent); font-size: 1.2rem; flex-shrink: 0; }
+.logo-text   { flex: 1; text-align: left; transition: opacity 0.2s, width 0.2s; }
+.collapse-arrow { font-size: 0.75rem; color: rgba(255,255,255,0.35); transition: transform 0.25s; }
 
 .sidebar-nav {
   display: flex;
@@ -124,31 +137,23 @@ body {
   color: var(--sidebar-text);
   text-decoration: none;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
 }
-.nav-item i { width: 16px; text-align: center; font-size: 0.85rem; }
+.nav-item i { width: 16px; text-align: center; font-size: 0.85rem; flex-shrink: 0; }
+.nav-item span { transition: opacity 0.2s; }
 .nav-item:hover  { background: rgba(255,255,255,0.07); color: #fff; }
 .nav-item.active { background: rgba(232,180,203,0.15); color: var(--sidebar-accent); }
 
-.sidebar-ws {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border-top: 1px solid rgba(255,255,255,0.07);
-  font-size: 0.8rem;
-  color: var(--sidebar-text);
-}
-.ws-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--warning);
-  flex-shrink: 0;
-  transition: background 0.3s;
-  animation: wsPing 2s ease-in-out infinite;
-}
-@keyframes wsPing {
-  0%,100% { opacity: 1; } 50% { opacity: 0.4; }
-}
+/* ─── Sidebar collapsed state ─────────────────────────── */
+.sidebar.collapsed { width: 60px; }
+.sidebar.collapsed .logo-text,
+.sidebar.collapsed .collapse-arrow,
+.sidebar.collapsed .nav-item span { opacity: 0; width: 0; pointer-events: none; }
+.sidebar.collapsed .sidebar-collapse-btn { justify-content: center; padding: 16px; }
+.sidebar.collapsed .collapse-arrow { transform: rotate(180deg); opacity: 0; }
+.sidebar.collapsed .nav-item { justify-content: center; padding: 10px; }
+.sidebar.collapsed + .main-content { margin-left: 60px; }
 
 /* ─── Main Content ────────────────────────────────────── */
 .main-content {
@@ -505,22 +510,24 @@ body {
 .vc-value-row {
   display: flex;
   align-items: baseline;
-  gap: 5px;
+  gap: 4px;
+  margin: 4px 0 2px;
 }
 .vc-value {
-  font-size: 2.6rem;
-  font-weight: 700;
+  font-size: 3.2rem;
+  font-weight: 800;
   line-height: 1;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 #card-hr   .vc-value { color: var(--hr-color); }
 #card-spo2 .vc-value { color: var(--spo2-color); }
 #card-temp .vc-value { color: var(--temp-color); }
 .vital-card.card-disconnected .vc-value { color: var(--text-muted); }
 
-.vc-unit { font-size: 0.88rem; color: var(--text-muted); font-weight: 500; }
+/* Unit is intentionally smaller/dimmer — value is the focus */
+.vc-unit { font-size: 0.78rem; color: var(--text-muted); font-weight: 400; opacity: 0.7; }
 
 .vc-bar-wrap {
   height: 5px;
@@ -748,3 +755,32 @@ body {
   height: 1px;
   background: var(--border);
 }
+
+/* ─── Notes field — amber clinical highlight ──────────── */
+.notes-field {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.notes-field-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--warning);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.notes-field .pf-val {
+  font-size: 0.85rem;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+/* ─── Admin section — visually secondary ─────────────── */
+.admin-section h3 { color: var(--text-muted); }
+.admin-section h3 i { color: var(--text-muted); }

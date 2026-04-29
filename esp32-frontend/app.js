@@ -50,10 +50,12 @@ function getVitalStatus(type, value) {
     if (value >= 92) return { level: "warning",  text: "Low",      icon: "fa-circle-exclamation"  };
     return                  { level: "critical", text: "Critical", icon: "fa-triangle-exclamation" };
   }
-  if (type === "temp") {   // °F
-    if (value < 100.4) return { level: "normal",   text: "Normal",     icon: "fa-circle-check"        };
-    if (value <= 102)  return { level: "warning",  text: "Mild Fever", icon: "fa-circle-exclamation"  };
-    return                    { level: "critical", text: "High Fever", icon: "fa-triangle-exclamation" };
+  if (type === "temp") {   // °F  [97°F–99.5°F normal; <97 = hypothermic; >=100.4 = fever]
+    if (value < 95)    return { level: "critical", text: "Hypothermic",  icon: "fa-triangle-exclamation" };
+    if (value < 97)    return { level: "warning",  text: "Low Temp",     icon: "fa-circle-exclamation"   };
+    if (value < 100.4) return { level: "normal",   text: "Normal",       icon: "fa-circle-check"         };
+    if (value <= 102)  return { level: "warning",  text: "Mild Fever",   icon: "fa-circle-exclamation"   };
+    return                    { level: "critical", text: "High Fever",   icon: "fa-triangle-exclamation" };
   }
 }
 
@@ -167,6 +169,7 @@ function renderVitals(raw, time) {
   // Live chart update
   const chartLabel = new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   updateLiveCharts(chartLabel, hr, spo2v === -1 ? null : spo2v, tempF, raw.isPeak);
+  syncChartColors(hr, spo2v, tempF);
 
   generateAlerts({ heartRate: hr, spo2: spo2v, temperatureF: tempF });
 }
@@ -256,13 +259,24 @@ function renderInsightsPanel() {
 function dismissAlert(key) { activeAlerts.delete(key); renderInsightsPanel(); }
 
 // ─── Charts ────────────────────────────────────────────────────────────────────
-function makeChartOpts({ yLabel, yMin, yMax, color, tickSuffix }) {
+// Normal-range band: rendered as a second filled dataset behind the data line
+// Using the "between datasets" fill trick — no plugin needed.
+function makeNormalBand(low, high, points) {
+  // Returns two constant datasets that Chart.js fills between
+  return {
+    low:  { label: "_band_low",  data: points.map(() => low),  borderWidth: 0, pointRadius: 0, fill: false, tension: 0 },
+    high: { label: "_band_high", data: points.map(() => high), borderWidth: 0, pointRadius: 0, fill: "-1",  backgroundColor: "rgba(61,171,110,0.07)", tension: 0 },
+  };
+}
+
+function makeChartOpts({ yLabel, yMin, yMax, tickSuffix, normalLow, normalHigh }) {
   return {
     responsive: true, maintainAspectRatio: false,
     animation: { duration: 200 },
     plugins: {
       legend: { display: false },
       tooltip: {
+        filter: item => item.dataset.label && !item.dataset.label.startsWith("_band"),
         backgroundColor: "#fff", titleColor: "#1a1a2e", bodyColor: "#5a5570",
         borderColor: "#e8e2d8", borderWidth: 1, padding: 10,
         callbacks: { label: ctx => ` ${ctx.parsed.y}${tickSuffix}` },
@@ -271,33 +285,95 @@ function makeChartOpts({ yLabel, yMin, yMax, color, tickSuffix }) {
     scales: {
       x: {
         ticks: { color: "#9b96a8", maxTicksLimit: 8, font: { size: 11 }, maxRotation: 0 },
-        grid:  { color: "rgba(0,0,0,0.04)" },
+        grid:  { display: false },                          // ← vertical gridlines OFF
         title: { display: true, text: "Time", color: "#9b96a8", font: { size: 11 } },
       },
       y: {
         min: yMin, max: yMax,
         ticks: { color: "#9b96a8", font: { size: 11 }, callback: v => v + tickSuffix },
-        grid:  { color: "rgba(0,0,0,0.04)" },
+        grid:  { color: "rgba(0,0,0,0.035)", drawBorder: false },  // only horizontal
         title: { display: true, text: yLabel, color: "#9b96a8", font: { size: 11 } },
       },
     },
     elements: {
       line:  { tension: 0.4, borderWidth: 2.5 },
-      point: { radius: 0, hitRadius: 12, hoverRadius: 5, hoverBackgroundColor: color },
+      point: { radius: 0, hitRadius: 12, hoverRadius: 5 },
     },
   };
 }
 
+function makeChart(id, label, color, opts) {
+  const { yMin, yMax, yLabel, tickSuffix, normalLow, normalHigh } = opts;
+  // Band datasets are placeholders — filled once real data loads
+  const bandLow  = { label: "_band_low",  data: [], borderWidth: 0, pointRadius: 0, fill: false,  tension: 0, backgroundColor: "transparent" };
+  const bandHigh = { label: "_band_high", data: [], borderWidth: 0, pointRadius: 0, fill: "-1",   tension: 0, backgroundColor: "rgba(61,171,110,0.07)", borderColor: "transparent" };
+  const dataSet  = { label, data: [], borderColor: color, backgroundColor: color + "18", fill: 2, spanGaps: false, order: 0 };
+  // order: data line above fill datasets
+  bandLow.order  = 2;
+  bandHigh.order = 1;
+
+  const chart = new Chart(document.getElementById(id).getContext("2d"), {
+    type: "line",
+    data: { labels: [], datasets: [dataSet, bandHigh, bandLow] },
+    options: makeChartOpts({ yMin, yMax, yLabel, tickSuffix, normalLow, normalHigh }),
+  });
+  chart._normalLow  = normalLow;
+  chart._normalHigh = normalHigh;
+  return chart;
+}
+
+// Sync band data length to match labels after data load
+function syncBands(chart) {
+  if (!chart) return;
+  const len  = chart.data.labels.length;
+  const low  = chart._normalLow;
+  const high = chart._normalHigh;
+  chart.data.datasets[2].data = Array(len).fill(low);   // bandLow
+  chart.data.datasets[1].data = Array(len).fill(high);  // bandHigh
+}
+
 function initCharts() {
-  const mk = (id, label, color, opts) =>
-    new Chart(document.getElementById(id).getContext("2d"), {
-      type: "line",
-      data: { labels: [], datasets: [{ label, data: [], borderColor: color, backgroundColor: color + "18", fill: true, spanGaps: false }] },
-      options: makeChartOpts({ color, ...opts }),
-    });
-  hrChart   = mk("hrChart",   "Heart Rate",  "#e05c6e", { yLabel: "bpm", yMin: 30,  yMax: 200, tickSuffix: " bpm" });
-  spo2Chart = mk("spo2Chart", "SpO₂",        "#4ab3c8", { yLabel: "%",   yMin: 80,  yMax: 100, tickSuffix: "%"    });
-  tempChart = mk("tempChart", "Temperature", "#e0963c", { yLabel: "°F",  yMin: 90,  yMax: 104, tickSuffix: "°F"   });
+  hrChart   = makeChart("hrChart",   "Heart Rate",  "#5b8dee", { yLabel: "bpm", yMin: 30,  yMax: 200, tickSuffix: " bpm", normalLow: 60,  normalHigh: 100 });
+  spo2Chart = makeChart("spo2Chart", "SpO₂",        "#4ab3c8", { yLabel: "%",   yMin: 80,  yMax: 100, tickSuffix: "%",    normalLow: 95,  normalHigh: 100 });
+  tempChart = makeChart("tempChart", "Temperature", "#e0963c", { yLabel: "°F",  yMin: 90,  yMax: 104, tickSuffix: "°F",   normalLow: 97,  normalHigh: 100.4 });
+}
+
+// ── Dynamic chart line coloring ───────────────────────────────────────────────
+// Blue = normal, amber = warning, red = critical. Removed from "safe" reads.
+const CHART_COLORS = {
+  normal:   { line: "#5b8dee", fill: "#5b8dee18" },
+  warning:  { line: "#e09a3c", fill: "#e09a3c18" },
+  critical: { line: "#e05c6e", fill: "#e05c6e18" },
+};
+
+function updateChartColor(chart, level) {
+  if (!chart) return;
+  const c = CHART_COLORS[level] || CHART_COLORS.normal;
+  chart.data.datasets[0].borderColor     = c.line;
+  chart.data.datasets[0].backgroundColor = c.fill;
+  // Don't call update here — caller will do it to batch
+}
+
+function syncChartColors(hr, spo2, tempF) {
+  if (hr != null) {
+    const lvl = getVitalStatus("hr", hr).level;
+    updateChartColor(hrChart, lvl);
+    // Also update the chart label dot in HTML
+    const dot = document.getElementById("hrChartDot");
+    if (dot) dot.style.background = CHART_COLORS[lvl]?.line || "#5b8dee";
+    if (hrChart) hrChart.update("none");
+  }
+  // SpO2 and temp keep their dedicated colors (teal/amber) — only shade shifts
+  if (spo2 != null && spo2 !== -1) {
+    const lvl = getVitalStatus("spo2", spo2).level;
+    updateChartColor(spo2Chart, lvl === "normal" ? "normal" : lvl);
+    if (spo2Chart) spo2Chart.update("none");
+  }
+  if (tempF != null) {
+    const lvl = getVitalStatus("temp", tempF).level;
+    updateChartColor(tempChart, lvl);
+    if (tempChart) tempChart.update("none");
+  }
 }
 
 // Append a single new data point to whichever historical chart is active.
@@ -315,16 +391,17 @@ function appendToActiveChart(time, hr, spo2, tempF) {
     if (!c) return;
     c.data.labels.push(chartLabel);
     c.data.datasets[0].data.push(v ?? null);
+    // Extend band arrays to match
+    if (c.data.datasets[2]) c.data.datasets[2].data.push(c._normalLow);
+    if (c.data.datasets[1]) c.data.datasets[1].data.push(c._normalHigh);
 
-    // Trim old points that fall outside the current window
-    const windowMs = currentFilter === "1h" ? 3600000 : 86400000;
-    while (c.data.labels.length > 0) {
-      // Estimate: keep at most windowMs worth of points (assume ~5s per point)
-      const maxPoints = currentFilter === "1h" ? 720 : 17280;
-      if (c.data.labels.length > maxPoints) {
-        c.data.labels.shift();
-        c.data.datasets[0].data.shift();
-      } else break;
+    // Trim to window
+    const maxPoints = currentFilter === "1h" ? 720 : 17280;
+    while (c.data.labels.length > maxPoints) {
+      c.data.labels.shift();
+      c.data.datasets[0].data.shift();
+      if (c.data.datasets[1]) c.data.datasets[1].data.shift();
+      if (c.data.datasets[2]) c.data.datasets[2].data.shift();
     }
     c.update("none");
   });
@@ -370,8 +447,9 @@ async function fetchHistoricalData(range) {
       { c: tempChart, d: tempD },
     ].forEach(({ c, d }) => {
       if (!c) return;
-      c.data.labels             = labels;
-      c.data.datasets[0].data   = d;
+      c.data.labels           = labels;
+      c.data.datasets[0].data = d;
+      syncBands(c);    // keep normal-range band same length as data
       c.update();
     });
   } catch (e) {
@@ -586,6 +664,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Auto-load 1h on page open
   fetchHistoricalData("1h");
+
+  // Sidebar collapse toggle
+  document.getElementById("sidebarToggle")?.addEventListener("click", () => {
+    const sb = document.getElementById("sidebar");
+    sb?.classList.toggle("collapsed");
+  });
 
   // Edit modal
   document.getElementById("editBtn")?.addEventListener("click", openEditModal);
