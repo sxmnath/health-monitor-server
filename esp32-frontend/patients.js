@@ -1,3 +1,6 @@
+// Auth guard — redirects to /login if no token stored
+if (typeof requireAuth === "function" && !requireAuth()) throw new Error("redirect");
+
 const PATIENTS_API = "/api/patients";
 
 function setWardWsStatus(state) {
@@ -117,7 +120,7 @@ function renderPatients(patients) {
 
 async function fetchPatients() {
   try {
-    const res  = await fetch(PATIENTS_API);
+    const res  = await authFetch(PATIENTS_API);
     const data = await res.json();
     renderPatients(Array.isArray(data) ? data : []);
   } catch (e) { console.warn("Failed to fetch patients:", e.message); }

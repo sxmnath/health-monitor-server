@@ -1151,3 +1151,24 @@ html {
 }
 .toast-icon { font-size: 1rem; color: var(--normal); flex-shrink: 0; }
 .toast.toast-error .toast-icon { color: var(--critical); }
+
+/* ─── Sidebar bottom / logout ─────────────────────────────── */
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 0 12px 12px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding-top: 10px;
+}
+.logout-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  color: rgba(255,255,255,0.4);
+}
+.logout-btn:hover {
+  background: rgba(224,92,92,0.12) !important;
+  color: #e05c6e !important;
+}
+.sidebar.collapsed .sidebar-bottom { padding: 10px 6px 12px; }

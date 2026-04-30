@@ -420,7 +420,7 @@ async function fetchHistoricalData(range) {
 
   showChartLoading(true);
   try {
-    const res    = await fetch(`/api/patients/${encodeURIComponent(pid)}/history?range=${range}`);
+    const res    = await authFetch(`/api/patients/${encodeURIComponent(pid)}/history?range=${range}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const result = await res.json();
 
@@ -498,7 +498,7 @@ function renderProfile(p) {
 async function loadPatientProfile() {
   if (!PAGE_PATIENT_ID || !isPatientId) return;
   try {
-    const res = await fetch(`/api/patients/${encodeURIComponent(PAGE_PATIENT_ID)}`);
+    const res = await authFetch(`/api/patients/${encodeURIComponent(PAGE_PATIENT_ID)}`);
     if (!res.ok) return;
     const p = await res.json();
     renderProfile(p);
@@ -533,8 +533,8 @@ async function saveModal() {
   const btn = document.getElementById("modalSave");
   try {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…'; }
-    const res = await fetch(`/api/patients/${encodeURIComponent(PAGE_PATIENT_ID)}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
+    const res = await authFetch(`/api/patients/${encodeURIComponent(PAGE_PATIENT_ID)}`, {
+      method: "PATCH", body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error("Save failed");
     const updated = await res.json();
@@ -583,11 +583,11 @@ async function executeReset() {
 
   try {
     // 1. Delete all sensor/vitals data
-    const dataRes = await fetch(`/api/patients/${encodeURIComponent(pid)}/data`, { method: "DELETE" });
+    const dataRes = await authFetch(`/api/patients/${encodeURIComponent(pid)}/data`, { method: "DELETE" });
     const dataR   = await dataRes.json();
 
     // 2. Clear all profile fields (keeps device registration)
-    const profRes = await fetch(`/api/patients/${encodeURIComponent(pid)}/profile`, { method: "DELETE" });
+    const profRes = await authFetch(`/api/patients/${encodeURIComponent(pid)}/profile`, { method: "DELETE" });
     if (!profRes.ok) throw new Error("Profile reset failed");
     const resetProfile = await profRes.json();
 
@@ -619,7 +619,7 @@ async function executeReset() {
 // ─── Dashboard poll (fallback when WebSocket misses a frame) ──────────────────
 async function loadDashboard() {
   try {
-    const res  = await fetch(API);
+    const res  = await authFetch(API);
     const data = await res.json();
     if (data.message === "No data yet" || data.error) return;
 

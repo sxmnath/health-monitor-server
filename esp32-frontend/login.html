@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>healthMonitor — Login</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    /* ── Tokens (mirrors style.css) ─────────────────────── */
+    :root {
+      --bg:           #f5f0e8;
+      --surface:      #ffffff;
+      --surface-2:    #faf8f4;
+      --sidebar-bg:   #1a1a2e;
+      --sidebar-accent: #e8b4cb;
+      --border:       #e8e2d8;
+      --border-mid:   #d4cec4;
+      --text-primary: #1a1a2e;
+      --text-secondary:#5a5570;
+      --text-muted:   #9b96a8;
+      --blue:         #5b8dee;
+      --blue-light:   #eef2fd;
+      --blue-mid:     #c5d5f8;
+      --normal:       #3dab6e;
+      --normal-light: #eaf7f0;
+      --critical:     #e05c5c;
+      --critical-light:#fdeaea;
+      --hr-mid:       #f5b8c2;
+      --warning:      #e09a3c;
+      --radius-sm:    8px;
+      --radius-md:    14px;
+      --radius-lg:    20px;
+      --shadow-sm:    0 1px 4px rgba(26,26,46,0.06);
+      --shadow-md:    0 4px 16px rgba(26,26,46,0.09);
+      --shadow-lg:    0 8px 40px rgba(26,26,46,0.14);
+      --font:         'Outfit', sans-serif;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Split layout ────────────────────────────────────── */
+    .auth-wrap {
+      display: flex;
+      width: 100%;
+      max-width: 900px;
+      min-height: 560px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Left dark panel — branding */
+    .auth-brand {
+      width: 340px;
+      flex-shrink: 0;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 48px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle decorative rings */
+    .auth-brand::before,
+    .auth-brand::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .auth-brand::before { width: 320px; height: 320px; top: -100px; right: -100px; }
+    .auth-brand::after  { width: 220px; height: 220px; bottom: -80px; left: -80px; }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+    .brand-logo-icon {
+      width: 44px; height: 44px;
+      border-radius: var(--radius-sm);
+      background: rgba(232,180,203,0.15);
+      border: 1px solid rgba(232,180,203,0.25);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--sidebar-accent);
+      font-size: 1.3rem;
+    }
+    .brand-logo-text {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-headline {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+    }
+    .brand-sub {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.45);
+      line-height: 1.6;
+      margin-bottom: 40px;
+    }
+
+    .brand-features {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .brand-feature {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.6);
+    }
+    .brand-feature i {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.07);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem;
+      color: var(--sidebar-accent);
+      flex-shrink: 0;
+    }
+
+    /* Right white form panel */
+    .auth-form-panel {
+      flex: 1;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 48px 44px;
+    }
+
+    .form-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+    .form-subtitle {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+
+    /* ── Form fields ─────────────────────────────────────── */
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 16px;
+    }
+    .field-group label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .input-wrap {
+      position: relative;
+    }
+    .input-wrap i {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .field-group input {
+      width: 100%;
+      padding: 10px 12px 10px 36px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: var(--font);
+      font-size: 0.92rem;
+      color: var(--text-primary);
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field-group input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-light);
+    }
+    .field-group input.error {
+      border-color: var(--critical);
+      box-shadow: 0 0 0 3px var(--critical-light);
+    }
+    .field-error {
+      font-size: 0.78rem;
+      color: var(--critical);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 16px;
+    }
+
+    /* Password toggle button */
+    .pw-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      padding: 4px;
+      transition: color 0.15s;
+    }
+    .pw-toggle:hover { color: var(--text-secondary); }
+
+    /* ── Global error banner ──────────────────────────────── */
+    .error-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--critical-light);
+      border: 1px solid var(--hr-mid);
+      color: var(--critical);
+      font-size: 0.86rem;
+      font-weight: 500;
+      margin-bottom: 18px;
+      animation: bannerIn 0.2s ease;
+    }
+    .error-banner.show { display: flex; }
+    @keyframes bannerIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+    /* ── Submit button ───────────────────────────────────── */
+    .btn-primary {
+      width: 100%;
+      padding: 11px;
+      background: var(--sidebar-bg);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: var(--font);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-primary:hover   { opacity: 0.88; }
+    .btn-primary:active  { transform: scale(0.99); }
+    .btn-primary:disabled{ opacity: 0.55; cursor: default; }
+
+    /* ── Footer link ─────────────────────────────────────── */
+    .form-footer {
+      text-align: center;
+      margin-top: 22px;
+      font-size: 0.86rem;
+      color: var(--text-muted);
+    }
+    .form-footer a {
+      color: var(--blue);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .form-footer a:hover { text-decoration: underline; }
+
+    /* ── Divider ─────────────────────────────────────────── */
+    .form-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 20px 0;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .form-divider::before,
+    .form-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media (max-width: 700px) {
+      .auth-brand { display: none; }
+      .auth-form-panel { padding: 36px 24px; }
+      .auth-wrap { max-width: 420px; box-shadow: var(--shadow-md); }
+    }
+
+    /* ── Custom scrollbar ────────────────────────────────── */
+    ::-webkit-scrollbar               { width: 6px; }
+    ::-webkit-scrollbar-track         { background: transparent; }
+    ::-webkit-scrollbar-thumb         { background: var(--border-mid); border-radius: 99px; }
+  </style>
+</head>
+<body>
+
+  <div class="auth-wrap">
+
+    <!-- ── Left branding panel ──────────────────────────── -->
+    <div class="auth-brand">
+      <div class="brand-logo">
+        <div class="brand-logo-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+        <span class="brand-logo-text">healthMonitor</span>
+      </div>
+      <h1 class="brand-headline">Patient monitoring,<br>simplified.</h1>
+      <p class="brand-sub">Real-time vitals, AI-driven insights, and instant alerts — all in one clinical dashboard.</p>
+      <div class="brand-features">
+        <div class="brand-feature">
+          <i class="fa-solid fa-wave-square"></i>
+          Real-time vital sign monitoring
+        </div>
+        <div class="brand-feature">
+          <i class="fa-solid fa-brain"></i>
+          AI health insights &amp; alerts
+        </div>
+        <div class="brand-feature">
+          <i class="fa-solid fa-building-columns"></i>
+          Full ward overview dashboard
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right form panel ──────────────────────────────── -->
+    <div class="auth-form-panel">
+      <h2 class="form-title">Welcome back</h2>
+      <p class="form-subtitle">Sign in to your healthMonitor account</p>
+
+      <!-- Error banner -->
+      <div class="error-banner" id="errorBanner">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span id="errorMsg">Invalid credentials</span>
+      </div>
+
+      <form id="loginForm" novalidate>
+
+        <!-- Email -->
+        <div class="field-group">
+          <label for="email">Email Address</label>
+          <div class="input-wrap">
+            <i class="fa-regular fa-envelope"></i>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="you@hospital.com"
+              autocomplete="email"
+              required
+            />
+          </div>
+          <span class="field-error" id="emailErr"></span>
+        </div>
+
+        <!-- Password -->
+        <div class="field-group">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-lock"></i>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required
+            />
+            <button type="button" class="pw-toggle" id="pwToggle" tabindex="-1" aria-label="Toggle password visibility">
+              <i class="fa-regular fa-eye" id="pwToggleIcon"></i>
+            </button>
+          </div>
+          <span class="field-error" id="passwordErr"></span>
+        </div>
+
+        <button type="submit" class="btn-primary" id="loginBtn">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>
+          Sign In
+        </button>
+
+      </form>
+
+      <div class="form-divider">or</div>
+
+      <div class="form-footer">
+        Don't have an account?
+        <a href="/signup">Create one</a>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── Redirect if already logged in ────────────────────────────────────────
+    if (localStorage.getItem("hm_token")) {
+      window.location.replace("/");
+    }
+
+    // ── Password visibility toggle ────────────────────────────────────────────
+    document.getElementById("pwToggle").addEventListener("click", () => {
+      const input = document.getElementById("password");
+      const icon  = document.getElementById("pwToggleIcon");
+      const show  = input.type === "password";
+      input.type  = show ? "text" : "password";
+      icon.className = show ? "fa-regular fa-eye-slash" : "fa-regular fa-eye";
+    });
+
+    // ── Field validation helpers ──────────────────────────────────────────────
+    function setFieldError(fieldId, errId, msg) {
+      const input = document.getElementById(fieldId);
+      const err   = document.getElementById(errId);
+      if (msg) {
+        input.classList.add("error");
+        err.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${msg}`;
+      } else {
+        input.classList.remove("error");
+        err.textContent = "";
+      }
+    }
+
+    function clearErrors() {
+      ["email", "password"].forEach(id => {
+        document.getElementById(id).classList.remove("error");
+      });
+      document.getElementById("emailErr").textContent    = "";
+      document.getElementById("passwordErr").textContent = "";
+      const banner = document.getElementById("errorBanner");
+      banner.classList.remove("show");
+    }
+
+    function showBanner(msg) {
+      const banner = document.getElementById("errorBanner");
+      document.getElementById("errorMsg").textContent = msg;
+      banner.classList.add("show");
+    }
+
+    // ── Client-side validation ────────────────────────────────────────────────
+    function validate() {
+      let ok = true;
+      const email    = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email) {
+        setFieldError("email", "emailErr", "Email is required"); ok = false;
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setFieldError("email", "emailErr", "Enter a valid email address"); ok = false;
+      } else {
+        setFieldError("email", "emailErr", "");
+      }
+
+      if (!password) {
+        setFieldError("password", "passwordErr", "Password is required"); ok = false;
+      } else {
+        setFieldError("password", "passwordErr", "");
+      }
+
+      return ok;
+    }
+
+    // ── Form submit ───────────────────────────────────────────────────────────
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearErrors();
+      if (!validate()) return;
+
+      const btn = document.getElementById("loginBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in…';
+
+      try {
+        const res  = await fetch("/auth/login", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({
+            email:    document.getElementById("email").value.trim(),
+            password: document.getElementById("password").value,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem("hm_token", data.token);
+          window.location.replace("/");
+        } else if (res.status === 422 && data.fields) {
+          // Per-field validation errors from server
+          if (data.fields.email)    setFieldError("email",    "emailErr",    data.fields.email);
+          if (data.fields.password) setFieldError("password", "passwordErr", data.fields.password);
+        } else {
+          // 401 or generic error
+          showBanner(data.error || "Something went wrong. Please try again.");
+        }
+
+      } catch {
+        showBanner("Cannot reach the server. Check your connection.");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In';
+      }
+    });
+  </script>
+</body>
+</html>
