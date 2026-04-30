@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Health Monitor — Patient Dashboard</title>
+  <title>healthMonitor — Patient Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,9 +21,10 @@
       <div class="sidebar-logo">
         <button class="sidebar-collapse-btn" id="sidebarToggle" title="Collapse sidebar">
           <i class="fa-solid fa-heart-pulse logo-icon"></i>
-          <span class="logo-text">MedMonitor</span>
+          <span class="logo-text">healthMonitor</span>
           <i class="fa-solid fa-chevron-left collapse-arrow"></i>
         </button>
+        <span class="sidebar-tagline">Real-time patient monitoring</span>
       </div>
       <nav class="sidebar-nav">
         <a href="/" class="nav-item" title="Ward Overview">
@@ -322,6 +323,35 @@
     </div>
   </div>
 
+
+  <!-- ── Reset Confirm Modal ──────────────────────────────── -->
+  <div class="modal-overlay" id="resetConfirmModal">
+    <div class="modal-box modal-box-sm">
+      <div class="modal-header modal-header-danger">
+        <h2><i class="fa-solid fa-triangle-exclamation"></i> Reset Patient Data</h2>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-body-text" id="confirmBodyText"></p>
+        <ul class="confirm-list">
+          <li><i class="fa-solid fa-xmark"></i> All historical vitals &amp; sensor readings</li>
+          <li><i class="fa-solid fa-xmark"></i> Patient profile (name, age, room, etc.)</li>
+        </ul>
+        <p class="confirm-warn-text">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="confirmCancelBtn">Cancel</button>
+        <button class="btn-danger" id="confirmResetBtn">
+          <i class="fa-solid fa-trash"></i> Reset Everything
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Result Toast ──────────────────────────────────────── -->
+  <div class="toast" id="resultToast">
+    <i class="fa-solid fa-circle-check toast-icon"></i>
+    <span id="toastMsg"></span>
+  </div>
   <script src="app.js"></script>
 </body>
 </html>

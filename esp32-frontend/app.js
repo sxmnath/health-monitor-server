@@ -480,7 +480,7 @@ function renderProfile(p) {
   const name = p.name || p.patient_id || PAGE_PATIENT_ID || "Patient";
   set("patientName",   name);
   set("bcPatientName", name);
-  document.title = `${name} — Health Monitor`;
+  document.title = `${name} — HealthMonitor`;
   set("patientId",    p.patient_id || PAGE_PATIENT_ID);
   set("pf-room",      p.roomNo);
   set("pf-ward",      p.ward);
@@ -546,17 +546,40 @@ async function saveModal() {
   }
 }
 
-// ─── Reset Patient Data ────────────────────────────────────────────────────────
-async function resetPatientData() {
+// ─── Toast helper ─────────────────────────────────────────────────────────────
+function showToast(msg, isError = false) {
+  const toast = document.getElementById("resultToast");
+  if (!toast) return;
+  const icon = toast.querySelector(".toast-icon");
+  document.getElementById("toastMsg").textContent = msg;
+  toast.classList.toggle("toast-error", isError);
+  if (icon) icon.className = `fa-solid ${isError ? "fa-circle-xmark" : "fa-circle-check"} toast-icon`;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 3500);
+}
+
+// ─── Reset Patient Data — in-page modal confirm ────────────────────────────────
+function resetPatientData() {
+  const pid  = currentPatientId || PAGE_PATIENT_ID;
+  if (!pid) return;
+  const name = patientProfile.name || pid;
+
+  // Populate and open the confirm modal
+  const bodyEl = document.getElementById("confirmBodyText");
+  if (bodyEl) bodyEl.textContent = `You are about to fully reset "${name}".`;
+
+  const modal = document.getElementById("resetConfirmModal");
+  modal?.classList.add("open");
+}
+
+async function executeReset() {
   const pid = currentPatientId || PAGE_PATIENT_ID;
   if (!pid) return;
-  if (!confirm(
-    `Full reset for ${patientProfile.name || pid}?\n\n` +
-    `This will permanently delete:\n` +
-    `  • All historical vitals\n` +
-    `  • All patient profile data (name, age, room, etc.)\n\n` +
-    `This cannot be undone.`
-  )) return;
+
+  const btn = document.getElementById("confirmResetBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Resetting…'; }
+
+  document.getElementById("resetConfirmModal")?.classList.remove("open");
 
   try {
     // 1. Delete all sensor/vitals data
@@ -571,7 +594,7 @@ async function resetPatientData() {
     // 3. Clear charts
     [hrChart, spo2Chart, tempChart].forEach(c => {
       if (!c) return;
-      c.data.labels = []; c.data.datasets[0].data = []; c.update();
+      c.data.labels = []; c.data.datasets[0].data = []; syncBands(c); c.update();
     });
 
     // 4. Clear signal processing buffers and peaks
@@ -581,13 +604,15 @@ async function resetPatientData() {
     // 5. Clear alerts and insights panel
     activeAlerts.clear(); aiInsights = []; renderInsightsPanel();
 
-    // 6. Blank the profile UI — pass the reset profile back (has default name, no fields)
+    // 6. Blank the profile UI
     renderProfile(resetProfile);
 
-    alert(`Reset complete — ${dataR.deleted || 0} vitals records deleted and profile cleared.`);
+    showToast(`Reset complete — ${dataR.deleted || 0} records deleted.`);
   } catch (e) {
-    console.error("[resetPatientData]", e);
-    alert("Reset failed. Check server connection.");
+    console.error("[executeReset]", e);
+    showToast("Reset failed. Check server connection.", true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-trash"></i> Reset Everything'; }
   }
 }
 
@@ -680,6 +705,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target === e.currentTarget) closeEditModal();
   });
 
-  // Reset button
+  // Reset button — opens confirm modal
   document.getElementById("resetDataBtn")?.addEventListener("click", resetPatientData);
+
+  // Confirm modal buttons
+  document.getElementById("confirmResetBtn")?.addEventListener("click", executeReset);
+  document.getElementById("confirmCancelBtn")?.addEventListener("click", () => {
+    document.getElementById("resetConfirmModal")?.classList.remove("open");
+  });
+  document.getElementById("resetConfirmModal")?.addEventListener("click", e => {
+    if (e.target === e.currentTarget)
+      document.getElementById("resetConfirmModal")?.classList.remove("open");
+  });
 });
