@@ -7,6 +7,9 @@ const cors       = require("cors");
 const http       = require("http");
 const path       = require("path");
 const { Server } = require("socket.io");
+const User          = require("./models/User");
+const { protect, requireRole } = require("./middleware/auth");
+const authRouter    = require("./routes/auth");
 
 const app    = express();
 const server = http.createServer(app);
@@ -38,9 +41,6 @@ mongoose.connect(process.env.MONGO_URI)
 const SensorData    = require("./models/SensorData");
 const Patient       = require("./models/Patient");
 const analyzeHealth = require("./fusion/healthFusion");
-const User          = require("./models/User");
-const { protect, requireRole } = require("./middleware/auth");
-const authRouter    = require("./routes/auth");
 
 // ─── Signal Processing (server-side) ─────────────────────────────────────────
 // Per-device sliding windows for moving average
