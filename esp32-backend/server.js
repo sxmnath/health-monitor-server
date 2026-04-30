@@ -15,7 +15,20 @@ const io     = new Server(server, { cors: { origin: "*" } });
 app.use(cors());
 app.use(express.json());
 app.use((req, _res, next) => { req.io = io; next(); });
+// ─── Auth Routes (public — no token needed) ──────────────────────────────────
+app.use("/auth", authRouter);
+
 app.use(express.static(path.join(__dirname, "../esp32-frontend"), { index: false }));
+
+// ─── Startup guards ──────────────────────────────────────────────────────────
+if (!process.env.JWT_SECRET) {
+  console.error("[FATAL] JWT_SECRET is not set in .env — refusing to start.");
+  process.exit(1);
+}
+if (!process.env.MONGO_URI) {
+  console.error("[FATAL] MONGO_URI is not set in .env — refusing to start.");
+  process.exit(1);
+}
 
 // ─── DB Connection ────────────────────────────────────────────────────────────
 mongoose.connect(process.env.MONGO_URI)
@@ -25,6 +38,9 @@ mongoose.connect(process.env.MONGO_URI)
 const SensorData    = require("./models/SensorData");
 const Patient       = require("./models/Patient");
 const analyzeHealth = require("./fusion/healthFusion");
+const User          = require("./models/User");
+const { protect, requireRole } = require("./middleware/auth");
+const authRouter    = require("./routes/auth");
 
 // ─── Signal Processing (server-side) ─────────────────────────────────────────
 // Per-device sliding windows for moving average
@@ -174,7 +190,7 @@ app.post("/data", async (req, res) => {
 
 // ─── GET /api/patients ────────────────────────────────────────────────────────
 // List all patients with their latest vitals
-app.get("/api/patients", async (req, res) => {
+app.get("/api/patients", protect, async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       return res.json(demoPatients());
@@ -214,7 +230,7 @@ app.get("/api/patients", async (req, res) => {
 
 // ─── GET /api/patients/:id ────────────────────────────────────────────────────
 // Patient profile + latest vitals
-app.get("/api/patients/:id", async (req, res) => {
+app.get("/api/patients/:id", protect, async (req, res) => {
   try {
     const patient = await Patient.findOne({ patient_id: req.params.id }).lean();
     if (!patient) return res.status(404).json({ error: "Patient not found" });
@@ -243,7 +259,7 @@ app.get("/api/patients/:id", async (req, res) => {
 
 // ─── POST /api/patients ───────────────────────────────────────────────────────
 // Create or update patient profile
-app.post("/api/patients", async (req, res) => {
+app.post("/api/patients", protect, async (req, res) => {
   try {
     const { patient_id, deviceId } = req.body;
     if (!patient_id || !deviceId) return res.status(400).json({ error: "patient_id and deviceId required" });
@@ -263,7 +279,7 @@ app.post("/api/patients", async (req, res) => {
 
 // ─── PATCH /api/patients/:id ──────────────────────────────────────────────────
 // Partial profile update (used by edit modal)
-app.patch("/api/patients/:id", async (req, res) => {
+app.patch("/api/patients/:id", protect, async (req, res) => {
   try {
     const allowed = ["name","age","gender","bloodType","weight","height","roomNo","ward","physician","diagnosis","phone","notes"];
     const update  = {};
@@ -281,7 +297,7 @@ app.patch("/api/patients/:id", async (req, res) => {
 
 // ─── GET /api/patients/:id/history?range=1h|24h ───────────────────────────────
 // Historical vitals — the fix for empty graphs
-app.get("/api/patients/:id/history", async (req, res) => {
+app.get("/api/patients/:id/history", protect, async (req, res) => {
   try {
     const { range = "1h", limit } = req.query;
     const pid = req.params.id;
@@ -352,7 +368,7 @@ app.get("/api/patients/:id/history", async (req, res) => {
 
 // ─── DELETE /api/patients/:id/data ───────────────────────────────────────────
 // Reset all vitals for a patient (keeps profile)
-app.delete("/api/patients/:id/data", async (req, res) => {
+app.delete("/api/patients/:id/data", protect, async (req, res) => {
   try {
     const result = await SensorData.deleteMany({ patient_id: req.params.id });
     const patient = await Patient.findOne({ patient_id: req.params.id }).lean();
@@ -368,7 +384,7 @@ app.delete("/api/patients/:id/data", async (req, res) => {
 // ─── DELETE /api/patients/:id/profile ────────────────────────────────────────
 // Clear all profile fields — keeps the Patient document (device stays registered)
 const PROFILE_FIELDS = ["name","age","gender","bloodType","weight","height","roomNo","ward","physician","diagnosis","phone","notes"];
-app.delete("/api/patients/:id/profile", async (req, res) => {
+app.delete("/api/patients/:id/profile", protect, requireRole("admin"), async (req, res) => {
   try {
     const unset = {};
     PROFILE_FIELDS.forEach(k => { unset[k] = ""; });
@@ -390,8 +406,8 @@ app.delete("/api/patients/:id/profile", async (req, res) => {
 });
 
 // ─── Legacy /api/patient/:id routes (backwards compat) ───────────────────────
-app.get("/api/patient/:id",        (req, res) => res.redirect(`/api/patients/${req.params.id}`));
-app.patch("/api/patient/:id",      async (req, res) => {
+app.get("/api/patient/:id",        protect, (req, res) => res.redirect(`/api/patients/${req.params.id}`));
+app.patch("/api/patient/:id",      protect, async (req, res) => {
   try {
     const allowed = ["name","age","gender","bloodType","weight","height","roomNo","ward","physician","diagnosis","phone","notes"];
     const update  = {};
@@ -402,10 +418,10 @@ app.patch("/api/patient/:id",      async (req, res) => {
     res.json(patient);
   } catch (err) { res.status(500).json({ error: "Server error" }); }
 });
-app.delete("/api/patient/:id/data", (req, res) => res.redirect(307, `/api/patients/${req.params.id}/data`));
+app.delete("/api/patient/:id/data", protect, (req, res) => res.redirect(307, `/api/patients/${req.params.id}/data`));
 
 // ─── Legacy /data/recent (backwards compat) ───────────────────────────────────
-app.get("/data/recent", async (req, res) => {
+app.get("/data/recent", protect, async (req, res) => {
   const { patientId, deviceId, seconds } = req.query;
   if (!seconds) return res.status(400).json({ error: "seconds required" });
   try {
@@ -419,7 +435,7 @@ app.get("/data/recent", async (req, res) => {
 });
 
 // ─── Dashboard endpoint (poll fallback) ──────────────────────────────────────
-app.get("/api/dashboard", async (req, res) => {
+app.get("/api/dashboard", protect, async (req, res) => {
   try {
     const { patientId, deviceId } = req.query;
     if (mongoose.connection.readyState !== 1) return res.json({ message: "No data yet" });
@@ -454,7 +470,7 @@ app.get("/api/dashboard", async (req, res) => {
 });
 
 // ─── Patient map helper ───────────────────────────────────────────────────────
-app.get("/api/patient-map", async (req, res) => {
+app.get("/api/patient-map", protect, async (req, res) => {
   try {
     const map = await Patient.find({}, { _id: 0, patient_id: 1, deviceId: 1, name: 1 }).lean();
     res.json(map);
