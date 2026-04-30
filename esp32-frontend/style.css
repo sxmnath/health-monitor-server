@@ -784,3 +784,227 @@ body {
 /* ─── Admin section — visually secondary ─────────────── */
 .admin-section h3 { color: var(--text-muted); }
 .admin-section h3 i { color: var(--text-muted); }
+
+/* ═══════════════════════════════════════════════════════════
+   WARD OVERVIEW — page-specific additions
+   Uses the same tokens and layout classes as the patient page.
+   Only the patient grid, cards, and summary strip are new here.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Ward topbar title row ───────────────────────────────── */
+.ward-title-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ward-page-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  letter-spacing: -0.01em;
+}
+.ward-page-title i { color: var(--blue); font-size: 1rem; }
+.ward-subtitle { font-size: 0.8rem; color: var(--text-muted); }
+
+/* patient-count-pill already defined in style.css topbar-meta section */
+
+/* ─── Ward content wrapper ────────────────────────────────── */
+.ward-content {
+  padding: 24px 28px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ─── Summary strip ───────────────────────────────────────── */
+.summary-strip {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.summary-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+.chip-critical { color: var(--critical); border-color: var(--hr-mid);  background: var(--critical-light); }
+.chip-warning  { color: var(--warning);  border-color: var(--temp-mid); background: var(--warning-light); }
+.chip-stable   { color: var(--normal);   border-color: #a8e6c4;         background: var(--normal-light); }
+
+/* ─── Patient grid ────────────────────────────────────────── */
+.patient-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 18px;
+}
+
+/* ─── Patient card ────────────────────────────────────────── */
+.patient-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  animation: cardIn 0.3s ease forwards;
+  opacity: 0;
+  transform: translateY(12px);
+  position: relative;
+  overflow: hidden;
+}
+@keyframes cardIn { to { opacity: 1; transform: translateY(0); } }
+.patient-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-3px); }
+
+/* Status top-border accent — mirrors vital card treatment */
+.patient-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.patient-card.status-stable::before   { background: var(--normal); }
+.patient-card.status-warning::before  { background: var(--warning); }
+.patient-card.status-critical::before { background: var(--critical); }
+.patient-card.status-critical {
+  animation: cardIn 0.3s ease forwards, wardCritPulse 2.5s infinite 0.3s;
+}
+@keyframes wardCritPulse {
+  0%,100% { box-shadow: var(--shadow-sm); }
+  50%     { box-shadow: 0 0 0 4px rgba(224,92,92,0.12); }
+}
+
+/* Card top row */
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.card-name-block { display: flex; align-items: center; gap: 10px; }
+
+.patient-avatar-sm {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--sidebar-bg) 0%, #2d2d5e 100%);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem;
+  color: var(--sidebar-accent);
+  flex-shrink: 0;
+}
+
+.patient-name     { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+.patient-meta-line { font-size: 0.74rem; color: var(--text-muted); margin-top: 2px; }
+
+.card-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+
+.pid-badge {
+  font-size: 0.68rem; font-weight: 600;
+  font-family: var(--font-mono);
+  padding: 2px 8px; border-radius: 99px;
+  background: var(--blue-light); color: var(--blue); border: 1px solid var(--blue-mid);
+}
+.status-badge {
+  font-size: 0.68rem; font-weight: 700;
+  padding: 2px 9px; border-radius: 99px;
+  letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid;
+}
+.badge-stable   { background: var(--normal-light);   color: var(--normal);   border-color: #a8e6c4; }
+.badge-warning  { background: var(--warning-light);  color: var(--warning);  border-color: var(--temp-mid); }
+.badge-critical { background: var(--critical-light); color: var(--critical); border-color: var(--hr-mid); }
+
+/* Location row */
+.card-location {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.78rem; color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+.card-location i  { color: var(--text-muted); font-size: 0.75rem; }
+.card-physician   { display: flex; align-items: center; gap: 4px; margin-left: auto; color: var(--text-muted); font-size: 0.74rem; }
+
+/* Vitals row */
+.vitals-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.vital-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.vital-chip.chip-nc { opacity: 0.5; }
+.chip-icon       { font-size: 0.85rem; }
+.chip-icon-hr   { color: var(--hr-color); }
+.chip-icon-spo2 { color: var(--spo2-color); }
+.chip-icon-temp { color: var(--temp-color); }
+.chip-val  { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.chip-unit { font-size: 0.68rem; color: var(--text-muted); }
+
+/* AI insight row */
+.insight-row {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.78rem; color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.insight-row i { color: var(--blue); font-size: 0.8rem; }
+
+/* Card footer */
+.card-footer { display: flex; align-items: center; justify-content: space-between; }
+.last-seen   { font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+.view-btn {
+  font-size: 0.78rem; font-weight: 600;
+  color: var(--blue);
+  background: var(--blue-light); border: 1px solid var(--blue-mid);
+  padding: 5px 13px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; gap: 5px;
+  transition: all 0.15s ease;
+}
+.patient-card:hover .view-btn { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+/* ─── Loading / empty ─────────────────────────────────────── */
+.loading-state, .empty-state {
+  grid-column: 1 / -1;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 14px;
+  color: var(--text-muted); padding: 80px 20px; font-size: 0.95rem;
+}
+.loading-state i { font-size: 1.8rem; color: var(--blue); }
+.empty-state   i { font-size: 2rem; }
+
+/* ─── Ward footer ─────────────────────────────────────────── */
+.ward-footer {
+  margin-top: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+
+/* ─── Ward responsive ─────────────────────────────────────── */
+@media (max-width: 900px) {
+  .patient-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .ward-content { padding: 16px 16px 40px; }
+}
+@media (max-width: 600px) {
+  .patient-grid { grid-template-columns: 1fr; }
+}

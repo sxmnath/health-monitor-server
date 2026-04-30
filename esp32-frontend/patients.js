@@ -1,18 +1,10 @@
 const PATIENTS_API = "/api/patients";
 
 function setWardWsStatus(state) {
-  const dot  = document.getElementById("wardWsDot");
-  const text = document.getElementById("wardWsText");
-  const pill = document.getElementById("wardWsIndicator");
-  const map  = {
-    connected:    { color: "#16a34a", label: "Live",          border: "rgba(22,163,74,0.25)",  bg: "rgba(22,163,74,0.08)"  },
-    disconnected: { color: "#dc2626", label: "Reconnecting…", border: "rgba(220,38,38,0.25)",  bg: "rgba(220,38,38,0.08)"  },
-    connecting:   { color: "#d97706", label: "Connecting…",   border: "rgba(217,119,6,0.25)",  bg: "rgba(217,119,6,0.08)"  },
-  };
-  const s = map[state] || map.connecting;
-  if (dot)  dot.style.background   = s.color;
-  if (text) text.textContent       = s.label;
-  if (pill) { pill.style.borderColor = s.border; pill.style.background = s.bg; pill.style.color = s.color; }
+  // WS status reflected via patient-count-pill border color
+  const pill = document.getElementById("patientCount")?.closest(".patient-count-pill");
+  const colors = { connected: "#3dab6e", disconnected: "#e05c5c", connecting: "#e09a3c" };
+  if (pill) pill.style.borderColor = colors[state] || colors.connecting;
 }
 
 function timeAgo(dateStr) {
@@ -118,7 +110,9 @@ function renderPatients(patients) {
   document.getElementById("countCritical").textContent = patients.filter(p => p.status === "critical").length;
   document.getElementById("countWarning").textContent  = patients.filter(p => p.status === "warning").length;
   document.getElementById("countStable").textContent   = patients.filter(p => p.status === "stable").length;
-  document.getElementById("wardUpdated").textContent   = `Last updated: ${new Date().toLocaleTimeString()}`;
+  document.getElementById("wardUpdated").textContent        = new Date().toLocaleTimeString();
+  const footer = document.getElementById("wardFooterUpdated");
+  if (footer) footer.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
 }
 
 async function fetchPatients() {
@@ -132,6 +126,11 @@ async function fetchPatients() {
 document.addEventListener("DOMContentLoaded", () => {
   setWardWsStatus("connecting");
   fetchPatients();
+
+  // Sidebar collapse — same behaviour as patient page
+  document.getElementById("wardSidebarToggle")?.addEventListener("click", () => {
+    document.getElementById("wardSidebar")?.classList.toggle("collapsed");
+  });
 
   const socket = io();
   socket.on("connect",             () => setWardWsStatus("connected"));

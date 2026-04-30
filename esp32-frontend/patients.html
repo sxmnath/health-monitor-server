@@ -3,66 +3,91 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-  <title>Health Monitor — Ward Overview</title>
-  <meta name="description" content="Multi-patient health monitoring ward dashboard." />
+  <title>HealthMonitor — Ward Overview</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="patients.css" />
+  <link rel="stylesheet" href="style.css" />
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+  <div class="app-layout">
 
-  <!-- Animated background -->
-  <div class="bg-blob blob-1"></div>
-  <div class="bg-blob blob-2"></div>
+    <!-- ── Sidebar ──────────────────────────────────────── -->
+    <aside class="sidebar" id="wardSidebar">
+      <div class="sidebar-logo">
+        <button class="sidebar-collapse-btn" id="wardSidebarToggle" title="Collapse sidebar">
+          <i class="fa-solid fa-heart-pulse logo-icon"></i>
+          <span class="logo-text">HealthMonitor</span>
+          <i class="fa-solid fa-chevron-left collapse-arrow"></i>
+        </button>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/" class="nav-item active" title="Ward Overview">
+          <i class="fa-solid fa-building-columns"></i>
+          <span>Ward Overview</span>
+        </a>
+      </nav>
+    </aside>
 
-  <div class="ward-container">
+    <!-- ── Main ─────────────────────────────────────────── -->
+    <main class="main-content">
 
-    <!-- Header -->
-    <header class="ward-header">
-      <div class="ward-title-group">
-        <i class="fa-solid fa-hospital ward-logo"></i>
-        <div>
-          <h1 class="ward-title">Health Monitor Ward</h1>
-          <span class="ward-subtitle">Real-time Multi-Patient Surveillance</span>
+      <!-- Topbar -->
+      <div class="topbar">
+        <div class="ward-title-row">
+          <h1 class="ward-page-title">
+            <i class="fa-solid fa-building-columns"></i>
+            Ward Overview
+          </h1>
+          <span class="ward-subtitle">Real-time patient monitoring</span>
+        </div>
+        <div class="topbar-meta">
+          <div class="patient-count-pill">
+            <i class="fa-solid fa-bed-pulse"></i>
+            <span id="patientCount">0</span>&nbsp;patients
+          </div>
+          <span class="updated-time" id="wardUpdated">--</span>
         </div>
       </div>
-      <div class="ward-meta">
-        <div class="ws-pill" id="wardWsIndicator">
-          <span class="dot" id="wardWsDot"></span>
-          <span id="wardWsText">Connecting…</span>
-        </div>
-        <div class="patient-count-pill">
-          <i class="fa-solid fa-bed-pulse"></i>
-          <span id="patientCount">0</span> active
-        </div>
-      </div>
-    </header>
 
-    <!-- Summary strip -->
-    <div class="summary-strip" id="summaryStrip">
-      <div class="summary-chip chip-critical"><i class="fa-solid fa-triangle-exclamation"></i> <span id="countCritical">0</span> Critical</div>
-      <div class="summary-chip chip-warning"><i class="fa-solid fa-circle-exclamation"></i> <span id="countWarning">0</span> Warning</div>
-      <div class="summary-chip chip-stable"><i class="fa-solid fa-circle-check"></i> <span id="countStable">0</span> Stable</div>
-    </div>
+      <!-- Content area -->
+      <div class="ward-content">
 
-    <!-- Patient grid -->
-    <main id="patientGrid" class="patient-grid">
-      <div class="loading-state">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        <p>Discovering patients…</p>
+        <!-- Summary strip -->
+        <div class="summary-strip" id="summaryStrip">
+          <div class="summary-chip chip-critical">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span id="countCritical">0</span> Critical
+          </div>
+          <div class="summary-chip chip-warning">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span id="countWarning">0</span> Warning
+          </div>
+          <div class="summary-chip chip-stable">
+            <i class="fa-solid fa-circle-check"></i>
+            <span id="countStable">0</span> Stable
+          </div>
+        </div>
+
+        <!-- Patient grid -->
+        <div id="patientGrid" class="patient-grid">
+          <div class="loading-state">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>Discovering patients…</p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="ward-footer">
+          <i class="fa-regular fa-clock"></i>
+          <span id="wardFooterUpdated">Last updated: --</span>
+        </footer>
+
       </div>
     </main>
-
-    <!-- Footer -->
-    <footer class="ward-footer">
-      <i class="fa-regular fa-clock"></i>
-      <span id="wardUpdated">Last updated: --</span>
-    </footer>
-
   </div>
 
   <script src="patients.js"></script>
