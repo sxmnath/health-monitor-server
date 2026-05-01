@@ -470,8 +470,19 @@
               </div>
               <span class="field-error-msg" id="emailErr"></span>
             </div>
+            <div class="field-group">
+              <label>Role</label>
+              <div class="input-wrap">
+                <i class="fa-solid fa-shield-halved input-icon"></i>
+                <input type="text" id="inputRole" readonly
+                       style="background:var(--surface-2);color:var(--text-muted);cursor:default"
+                       title="Role can only be changed by an administrator" />
+              </div>
+            </div>
             <div class="form-actions">
-              <button class="btn-cancel" type="button" onclick="cancelInfoEdit()">Cancel</button>
+              <button class="btn-cancel" type="button" onclick="cancelInfoEdit()">
+                <i class="fa-solid fa-xmark"></i> Cancel
+              </button>
               <button class="btn-save" type="button" id="infoSaveBtn" onclick="saveProfile()">
                 <i class="fa-solid fa-check"></i> Save Changes
               </button>
@@ -644,6 +655,8 @@
       // Edit inputs pre-filled
       document.getElementById("inputName").value  = u.name  || "";
       document.getElementById("inputEmail").value = u.email || "";
+      const roleInput = document.getElementById("inputRole");
+      if (roleInput) roleInput.value = cap(u.role);
 
       // Avatar thumb in edit mode
       const thumb = document.getElementById("avatarThumb");
@@ -660,10 +673,18 @@
     async function loadProfile() {
       try {
         const res  = await authFetch("/api/auth/me");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          console.error("[loadProfile] server error", res.status, err);
+          showToast("Could not load profile (" + res.status + ")", "error");
+          return;
+        }
         const data = await res.json();
         if (data.user) renderUser(data.user);
+        else showToast("No user data returned", "error");
       } catch (e) {
-        console.error("[loadProfile]", e.message);
+        console.error("[loadProfile]", e);
+        showToast("Could not reach server", "error");
       }
     }
 
@@ -715,12 +736,14 @@
         form.classList.add("open");
         avatarR.style.display = "flex";
         view.style.display    = "none";
-        btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Cancel';
+        btn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
         pendingAvatar = undefined;
         // Re-fill inputs with latest data
         if (currentUser) {
           document.getElementById("inputName").value  = currentUser.name  || "";
           document.getElementById("inputEmail").value = currentUser.email || "";
+          const ri = document.getElementById("inputRole");
+          if (ri) ri.value = cap(currentUser.role);
         }
       }
     }
@@ -779,7 +802,8 @@
           showToast(data.error || "Something went wrong", "error");
         }
       } catch (e) {
-        showToast("Cannot reach the server", "error");
+        console.error("[saveProfile]", e);
+        showToast("Cannot reach the server: " + e.message, "error");
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-check"></i> Save Changes';
@@ -797,7 +821,7 @@
       } else {
         form.classList.add("open");
         document.getElementById("pwView").style.display = "none";
-        btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Cancel';
+        btn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
       }
     }
 
