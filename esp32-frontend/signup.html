@@ -318,11 +318,10 @@
 
   </div>
 
+  <script src="auth.js"></script>
   <script>
     // ── Redirect if already logged in ─────────────────────────────────────────
-    if (localStorage.getItem("hm_token")) {
-      window.location.replace("/");
-    }
+    publicOnlyPage();
 
     // ── Password toggles ───────────────────────────────────────────────────────
     function makeToggle(btnId, inputId, iconId) {
@@ -436,7 +435,7 @@
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating account…';
 
       try {
-        const res  = await fetch("/auth/signup", {
+        const res  = await fetch("/api/auth/signup", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({
@@ -450,7 +449,7 @@
 
         if (res.ok) {
           // Auto-login: store token and redirect
-          localStorage.setItem("hm_token", data.token);
+          setToken(data.token);
           document.getElementById("successBanner").classList.add("show");
           setTimeout(() => window.location.replace("/"), 900);
         } else if (res.status === 422 && data.fields) {

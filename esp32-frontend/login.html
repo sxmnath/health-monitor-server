@@ -422,11 +422,10 @@
 
   </div>
 
+  <script src="auth.js"></script>
   <script>
     // ── Redirect if already logged in ────────────────────────────────────────
-    if (localStorage.getItem("hm_token")) {
-      window.location.replace("/");
-    }
+    publicOnlyPage();
 
     // ── Password visibility toggle ────────────────────────────────────────────
     document.getElementById("pwToggle").addEventListener("click", () => {
@@ -500,7 +499,7 @@
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in…';
 
       try {
-        const res  = await fetch("/auth/login", {
+        const res  = await fetch("/api/auth/login", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({
@@ -512,7 +511,7 @@
         const data = await res.json();
 
         if (res.ok) {
-          localStorage.setItem("hm_token", data.token);
+          setToken(data.token);
           window.location.replace("/");
         } else if (res.status === 422 && data.fields) {
           // Per-field validation errors from server

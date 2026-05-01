@@ -19,7 +19,7 @@ app.use(cors());
 app.use(express.json());
 app.use((req, _res, next) => { req.io = io; next(); });
 // ─── Auth Routes (public — no token needed) ──────────────────────────────────
-app.use("/auth", authRouter);
+app.use("/api/auth", authRouter);
 
 app.use(express.static(path.join(__dirname, "../esp32-frontend"), { index: false }));
 
@@ -184,11 +184,7 @@ app.post("/data", async (req, res) => {
     res.status(200).json({ status: "ok", patient_id: patient.patient_id });
   } catch (err) {
     console.error("[POST /data]", err);
-    res.status(500).json({
-      error:   err.message || "Server error",
-      type:    err.name,
-      ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
-    });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -257,11 +253,7 @@ app.get("/api/patients/:id", protect, async (req, res) => {
     });
   } catch (err) {
     console.error("[GET /api/patients/:id]", err);
-    res.status(500).json({
-      error:   err.message || "Server error",
-      type:    err.name,
-      ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
-    });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -281,11 +273,7 @@ app.post("/api/patients", protect, async (req, res) => {
     );
     res.json(patient);
   } catch (err) {
-    res.status(500).json({
-      error:   err.message || "Server error",
-      type:    err.name,
-      ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
-    });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -303,11 +291,7 @@ app.patch("/api/patients/:id", protect, async (req, res) => {
     io.emit("patient-profile-update", { patient_id: req.params.id });
     res.json(patient);
   } catch (err) {
-    res.status(500).json({
-      error:   err.message || "Server error",
-      type:    err.name,
-      ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
-    });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -378,11 +362,7 @@ app.get("/api/patients/:id/history", protect, async (req, res) => {
     res.json({ range, count: data.length, data });
   } catch (err) {
     console.error("[GET /api/patients/:id/history]", err);
-    res.status(500).json({
-      error:   err.message || "Server error",
-      type:    err.name,
-      ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
-    });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -397,11 +377,7 @@ app.delete("/api/patients/:id/data", protect, async (req, res) => {
     }
     res.json({ deleted: result.deletedCount });
   } catch (err) {
-    res.status(500).json({
-      error:   err.message || "Server error",
-      type:    err.name,
-      ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
-    });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -425,11 +401,7 @@ app.delete("/api/patients/:id/profile", protect, requireRole("admin"), async (re
     res.json(updated);
   } catch (err) {
     console.error("[DELETE /api/patients/:id/profile]", err);
-    res.status(500).json({
-      error:   err.message || "Server error",
-      type:    err.name,
-      ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
-    });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -444,11 +416,7 @@ app.patch("/api/patient/:id",      protect, async (req, res) => {
     if (!patient) return res.status(404).json({ error: "Patient not found" });
     io.emit("patient-profile-update", { patient_id: req.params.id });
     res.json(patient);
-  } catch (err) { res.status(500).json({
-      error:   err.message || "Server error",
-      type:    err.name,
-      ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
-    }); }
+  } catch (err) { res.status(500).json({ error: "Server error" }); }
 });
 app.delete("/api/patient/:id/data", protect, (req, res) => res.redirect(307, `/api/patients/${req.params.id}/data`));
 
@@ -463,7 +431,7 @@ app.get("/data/recent", protect, async (req, res) => {
     const id = patientId || (deviceId ? (await Patient.findOne({ deviceId }))?.patient_id : null);
     if (!id) return res.json({ count: 0, data: [] });
     res.redirect(`/api/patients/${id}/history?range=${range}`);
-  } catch (err) { console.error("[silent catch]", err.message); res.json({ count: 0, data: [] }); }
+  } catch { res.json({ count: 0, data: [] }); }
 });
 
 // ─── Dashboard endpoint (poll fallback) ──────────────────────────────────────
@@ -497,11 +465,7 @@ app.get("/api/dashboard", protect, async (req, res) => {
     });
   } catch (err) {
     console.error("[GET /api/dashboard]", err);
-    res.status(500).json({
-      error:   err.message || "Server error",
-      type:    err.name,
-      ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
-    });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -510,7 +474,7 @@ app.get("/api/patient-map", protect, async (req, res) => {
   try {
     const map = await Patient.find({}, { _id: 0, patient_id: 1, deviceId: 1, name: 1 }).lean();
     res.json(map);
-  } catch (err) { console.error("[silent catch]", err.message); res.json([]); }
+  } catch { res.json([]); }
 });
 
 // ─── Routers ──────────────────────────────────────────────────────────────────

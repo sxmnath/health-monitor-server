@@ -1,5 +1,5 @@
-// Auth guard — redirects to /login if no token stored
-if (typeof requireAuth === "function" && !requireAuth()) throw new Error("redirect");
+// Auth guard — redirects to /login immediately if no token stored
+if (!protectPage()) throw new Error("redirect");
 
 const PATIENTS_API = "/api/patients";
 

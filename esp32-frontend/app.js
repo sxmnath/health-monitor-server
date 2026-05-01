@@ -1,4 +1,7 @@
 "use strict";
+// Auth guard — redirects to /login immediately if no token stored
+if (!protectPage()) throw new Error("redirect");
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 const urlParams       = new URLSearchParams(window.location.search);
 const PAGE_PATIENT_ID = urlParams.get("id") || null;
