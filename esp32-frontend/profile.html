@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <title>healthMonitor — My Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- ── Sidebar ──────────────────────────────────────── -->
+    <aside class="sidebar" id="profileSidebar">
+      <div class="sidebar-logo">
+        <button class="sidebar-collapse-btn" id="profileSidebarToggle" title="Collapse sidebar">
+          <i class="fa-solid fa-heart-pulse logo-icon"></i>
+          <span class="logo-text">healthMonitor</span>
+          <i class="fa-solid fa-chevron-left collapse-arrow"></i>
+        </button>
+        <span class="sidebar-tagline">Real-time patient monitoring</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/" class="nav-item" title="Ward Overview">
+          <i class="fa-solid fa-building-columns"></i>
+          <span>Ward Overview</span>
+        </a>
+        <a href="/profile" class="nav-item active" title="My Profile">
+          <i class="fa-solid fa-user-circle"></i>
+          <span>My Profile</span>
+        </a>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="nav-item logout-btn" onclick="logout()" title="Logout">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── Main ─────────────────────────────────────────── -->
+    <main class="main-content">
+
+      <!-- Topbar -->
+      <div class="topbar">
+        <div class="breadcrumb-row">
+          <a href="/" class="back-link"><i class="fa-solid fa-chevron-left"></i> Ward Overview</a>
+          <i class="fa-solid fa-chevron-right bc-sep"></i>
+          <span class="bc-current">My Profile</span>
+        </div>
+        <div class="topbar-meta">
+          <div class="topbar-user">
+            <span class="topbar-greeting">Hello, <strong id="topbarUserName">…</strong></span>
+            <a href="/profile" class="topbar-avatar" id="topbarAvatar" title="View profile">
+              <i class="fa-solid fa-user-doctor" id="topbarAvatarIcon"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile content -->
+      <div class="profile-page-wrap">
+
+        <!-- Hero card -->
+        <div class="profile-hero" id="profileHero">
+          <div class="profile-hero-avatar" id="heroAvatar">
+            <i class="fa-solid fa-user-doctor"></i>
+          </div>
+          <div class="profile-hero-info">
+            <h2 id="heroName">Loading…</h2>
+            <div class="profile-email" id="heroEmail">—</div>
+            <span class="profile-role-badge" id="heroRole">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span id="heroRoleText">—</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Details card -->
+        <div class="profile-detail-card">
+          <h3><i class="fa-solid fa-id-card"></i>&nbsp; Account Details</h3>
+
+          <div class="profile-detail-row">
+            <span class="pd-label">Full Name</span>
+            <span class="pd-val" id="detailName">—</span>
+          </div>
+          <div class="profile-detail-row">
+            <span class="pd-label">Email Address</span>
+            <span class="pd-val" id="detailEmail">—</span>
+          </div>
+          <div class="profile-detail-row">
+            <span class="pd-label">Role</span>
+            <span class="pd-val" id="detailRole">—</span>
+          </div>
+          <div class="profile-detail-row">
+            <span class="pd-label">Last Login</span>
+            <span class="pd-val" id="detailLastLogin">—</span>
+          </div>
+          <div class="profile-detail-row">
+            <span class="pd-label">Member Since</span>
+            <span class="pd-val" id="detailCreatedAt">—</span>
+          </div>
+        </div>
+
+      </div><!-- /profile-page-wrap -->
+    </main>
+  </div>
+
+  <script src="auth.js"></script>
+  <script>
+    // Auth guard
+    if (!protectPage()) throw new Error("redirect");
+
+    function formatDate(iso) {
+      if (!iso) return "—";
+      return new Date(iso).toLocaleDateString(undefined, {
+        year: "numeric", month: "long", day: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      });
+    }
+
+    function capitalise(str) {
+      return str ? str.charAt(0).toUpperCase() + str.slice(1) : "—";
+    }
+
+    async function loadProfile() {
+      try {
+        const res  = await authFetch("/api/auth/me");
+        const data = await res.json();
+        const user = data.user;
+        if (!user) return;
+
+        // Topbar
+        const nameEl = document.getElementById("topbarUserName");
+        if (nameEl) nameEl.textContent = user.name ? user.name.split(" ")[0] : user.email;
+
+        const avatarEl = document.getElementById("topbarAvatar");
+        if (avatarEl && user.profileImage) {
+          avatarEl.innerHTML = `<img src="${user.profileImage}" alt="${user.name}" />`;
+        }
+
+        // Hero
+        document.getElementById("heroName").textContent  = user.name  || "—";
+        document.getElementById("heroEmail").textContent = user.email || "—";
+        document.getElementById("heroRoleText").textContent = capitalise(user.role);
+
+        if (user.profileImage) {
+          document.getElementById("heroAvatar").innerHTML =
+            `<img src="${user.profileImage}" alt="${user.name}" />`;
+        }
+
+        // Detail rows
+        document.getElementById("detailName").textContent      = user.name      || "—";
+        document.getElementById("detailEmail").textContent     = user.email     || "—";
+        document.getElementById("detailRole").textContent      = capitalise(user.role);
+        document.getElementById("detailLastLogin").textContent = formatDate(user.lastLogin);
+        document.getElementById("detailCreatedAt").textContent = formatDate(user.createdAt);
+
+      } catch (e) {
+        console.error("[loadProfile]", e.message);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadProfile();
+
+      // Sidebar collapse
+      document.getElementById("profileSidebarToggle")?.addEventListener("click", () => {
+        document.getElementById("profileSidebar")?.classList.toggle("collapsed");
+      });
+    });
+  </script>
+</body>
+</html>
