@@ -318,10 +318,11 @@
 
   </div>
 
-  <script src="auth.js"></script>
   <script>
     // ── Redirect if already logged in ─────────────────────────────────────────
-    publicOnlyPage();
+    if (localStorage.getItem("hm_token")) {
+      window.location.replace("/");
+    }
 
     // ── Password toggles ───────────────────────────────────────────────────────
     function makeToggle(btnId, inputId, iconId) {
@@ -449,7 +450,7 @@
 
         if (res.ok) {
           // Auto-login: store token and redirect
-          setToken(data.token);
+          localStorage.setItem("hm_token", data.token);
           document.getElementById("successBanner").classList.add("show");
           setTimeout(() => window.location.replace("/"), 900);
         } else if (res.status === 422 && data.fields) {

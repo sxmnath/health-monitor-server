@@ -422,10 +422,11 @@
 
   </div>
 
-  <script src="auth.js"></script>
   <script>
     // ── Redirect if already logged in ────────────────────────────────────────
-    publicOnlyPage();
+    if (localStorage.getItem("hm_token")) {
+      window.location.replace("/");
+    }
 
     // ── Password visibility toggle ────────────────────────────────────────────
     document.getElementById("pwToggle").addEventListener("click", () => {
@@ -511,7 +512,7 @@
         const data = await res.json();
 
         if (res.ok) {
-          setToken(data.token);
+          localStorage.setItem("hm_token", data.token);
           window.location.replace("/");
         } else if (res.status === 422 && data.fields) {
           // Per-field validation errors from server
