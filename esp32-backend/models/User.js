@@ -62,16 +62,12 @@ const UserSchema = new mongoose.Schema(
 // email is already indexed via unique:true above
 
 // ─── Pre-save hook: hash password only when it has been modified ──────────────
-UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+// Note: Mongoose 9 dropped next() for async hooks — just return the promise.
+UserSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
 
-  try {
-    const salt    = await bcrypt.genSalt(12);   // cost factor 12 — good balance
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (err) {
-    next(err);
-  }
+  const salt    = await bcrypt.genSalt(12);   // cost factor 12 — good balance
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // ─── Instance method: compare plain password against stored hash ───────────────
