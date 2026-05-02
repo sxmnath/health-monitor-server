@@ -193,7 +193,7 @@ router.patch(
       .isLength({ min: 2, max: 80 }).withMessage("Name must be 2–80 characters"),
     body("profileImage")
       .optional()
-      .isURL().withMessage("profileImage must be a valid URL"),
+
   ],
   async (req, res) => {
     if (handleValidation(req, res)) return;
@@ -216,6 +216,116 @@ router.patch(
     } catch (err) {
       console.error("[PATCH /auth/me]", err);
       res.status(500).json({ error: "Server error. Please try again." });
+    }
+  }
+);
+
+
+// ─── PUT /auth/update ─────────────────────────────────────────────────────────
+/**
+ * Update the logged-in user's profile and/or password in one call.
+ *
+ * Body (all fields optional — send only what needs to change):
+ *   { name, email, profileImage, currentPassword, newPassword }
+ *
+ * profileImage: base64 data URL, https:// URL, or null (to clear).
+ * Password change: both currentPassword + newPassword must be provided together.
+ *
+ * Returns: { message, user }
+ */
+router.put(
+  "/update",
+  protect,
+  [
+    body("name")
+      .optional()
+      .trim()
+      .isLength({ min: 2, max: 80 }).withMessage("Name must be 2–80 characters"),
+
+    body("email")
+      .optional()
+      .trim()
+      .isEmail().withMessage("Must be a valid email address")
+      .normalizeEmail(),
+
+    body("newPassword")
+      .optional()
+      .isLength({ min: 8 }).withMessage("Password must be at least 8 characters")
+      .matches(/[A-Za-z]/).withMessage("Password must contain at least one letter")
+      .matches(/\d/).withMessage("Password must contain at least one number"),
+  ],
+  async (req, res) => {
+    if (handleValidation(req, res)) return;
+
+    try {
+      const { name, email, profileImage, currentPassword, newPassword } = req.body;
+      const hasProfileChanges = name !== undefined || email !== undefined || profileImage !== undefined;
+      const hasPasswordChange = !!newPassword;
+
+      if (!hasProfileChanges && !hasPasswordChange) {
+        return res.status(400).json({ error: "No changes provided" });
+      }
+
+      // Load user with +password so pre-save hook can hash if needed
+      const user = await User.findById(req.user._id).select("+password");
+
+      // ── Verify current password before accepting a new one ─────────────
+      if (hasPasswordChange) {
+        if (!currentPassword) {
+          return res.status(422).json({
+            error:  "Validation failed",
+            fields: { currentPassword: "Current password is required to set a new one" },
+          });
+        }
+        const match = await user.comparePassword(currentPassword);
+        if (!match) {
+          return res.status(422).json({
+            error:  "Validation failed",
+            fields: { currentPassword: "Current password is incorrect" },
+          });
+        }
+        user.password = newPassword; // pre-save hook in User.js hashes it
+      }
+
+      // ── Email uniqueness check ─────────────────────────────────────────
+      if (email !== undefined && email !== user.email) {
+        const taken = await User.findOne({ email, _id: { $ne: user._id } });
+        if (taken) {
+          return res.status(409).json({
+            error:  "Validation failed",
+            fields: { email: "This email address is already in use" },
+          });
+        }
+        user.email = email;
+      }
+
+      // ── Apply profile field changes ────────────────────────────────────
+      if (name !== undefined)         user.name         = name;
+      if (profileImage !== undefined) user.profileImage = profileImage || null;
+
+      // Single save — pre-save hook only hashes if password was modified
+      await user.save();
+
+      res.status(200).json({
+        message: hasPasswordChange && hasProfileChanges
+          ? "Profile and password updated"
+          : hasPasswordChange ? "Password updated" : "Profile updated",
+        user: user.toPublicJSON(),
+      });
+
+    } catch (err) {
+      if (err.code === 11000) {
+        return res.status(409).json({
+          error:  "Validation failed",
+          fields: { email: "This email address is already in use" },
+        });
+      }
+      console.error("[PUT /auth/update]", err);
+      res.status(500).json({
+        error: err.message || "Server error",
+        type:  err.name,
+        ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
+      });
     }
   }
 );
