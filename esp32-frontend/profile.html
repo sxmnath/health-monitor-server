@@ -906,11 +906,11 @@
     $("sidebar")?.classList.toggle("collapsed");
   });
 
-  // ── 12. Init — load on DOMContentLoaded ──────────────────────────────────────
-  // protectPage() already ran synchronously above and confirmed a token exists.
-  // loadProfile() uses authFetch which needs the DOM to be ready for the
-  // never-resolving-promise redirect path, but the fetch itself is fine here.
-  document.addEventListener("DOMContentLoaded", loadProfile);
+  // ── 12. Init ──────────────────────────────────────────────────────────────────
+  // The <script> tag is at the bottom of <body>, so all DOM elements already
+  // exist when this runs. DOMContentLoaded may have already fired at this point,
+  // so call loadProfile() directly instead of waiting for the event.
+  loadProfile();
 </script>
 </body>
 </html>
