@@ -722,23 +722,27 @@ console.log("[hm-auth] loaded OK, token present:", !!getToken());
 
   // ── 5. Fetch profile from server ──────────────────────────────────────────────
   async function loadProfile() {
+    console.log("[loadProfile] starting fetch to /api/auth/me");
     try {
       const res = await authFetch("/api/auth/me");
+      console.log("[loadProfile] response received — status:", res?.status, "ok:", res?.ok);
       if (!res || !res.ok) {
         const body = res ? await res.json().catch(() => ({})) : {};
-        console.error("[loadProfile] HTTP", res?.status, body);
+        console.error("[loadProfile] HTTP error", res?.status, body);
         toast("Could not load profile — " + (body.error || "server error"), true);
         return;
       }
       const data = await res.json();
+      console.log("[loadProfile] data received:", JSON.stringify(data).slice(0, 200));
       if (data.user) {
         renderUser(data.user);
+        console.log("[loadProfile] renderUser called OK");
       } else {
         console.error("[loadProfile] no user in response", data);
         toast("Profile data missing from server response", true);
       }
     } catch (e) {
-      console.error("[loadProfile] network error", e);
+      console.error("[loadProfile] caught error:", e.name, e.message, e.stack);
       toast("Network error — could not reach server", true);
     }
   }
