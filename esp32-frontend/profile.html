@@ -666,58 +666,63 @@ console.log("[hm-auth] loaded OK, token present:", !!getToken());
   function removeSkel(el) { el?.classList.remove("skel"); }
 
   // ── 4. Render user everywhere ──────────────────────────────────────────────────
+  function set(id, prop, val) {
+    // Safe setter — silently skips if element not in DOM
+    const el = $(id);
+    if (!el) { console.warn("[renderUser] missing element:", id); return; }
+    if (prop === "text")  el.textContent = val;
+    if (prop === "html")  el.innerHTML   = val;
+    if (prop === "value") el.value       = val;
+    if (prop === "skel")  { el.classList.remove("skel"); el.textContent = val; }
+  }
+
   function renderUser(u) {
+    console.log("[renderUser] called with", u.name, u.email);
     _user = u;
 
     // ── Topbar ──
     const tn = $("topbarName");
     if (tn) tn.textContent = u.name ? u.name.split(" ")[0] : u.email;
     const ta = $("topbarAvatar");
-    if (ta) {
-      if (u.profileImage) {
-        ta.innerHTML = `<img src="${u.profileImage}" alt="${u.name}"
-          style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-      } else {
-        ta.innerHTML = `<i class="fa-solid fa-user-doctor"></i>`;
-      }
-    }
+    if (ta) ta.innerHTML = u.profileImage
+      ? `<img src="${u.profileImage}" alt="${u.name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+      : `<i class="fa-solid fa-user-doctor"></i>`;
 
     // ── Hero ──
-    removeSkel($("heroName"));    $("heroName").textContent    = u.name  || "—";
-    removeSkel($("heroEmail"));   $("heroEmail").textContent   = u.email || "—";
-    removeSkel($("heroRole"));    $("heroRole").textContent    = cap(u.role);
-    removeSkel($("heroSince"));   $("heroSince").textContent   = fmtDate(u.createdAt);
-    removeSkel($("heroLastLogin")); $("heroLastLogin").textContent = fmtDateTime(u.lastLogin);
+    set("heroName",      "skel", u.name  || "—");
+    set("heroEmail",     "skel", u.email || "—");
+    set("heroRole",      "skel", cap(u.role));
+    set("heroSince",     "skel", fmtDate(u.createdAt));
+    set("heroLastLogin", "skel", fmtDateTime(u.lastLogin));
+    console.log("[renderUser] hero done");
 
     const ha = $("heroAvatar");
-    if (u.profileImage) {
-      ha.innerHTML = `<img src="${u.profileImage}" alt="${u.name}">`;
-    } else {
-      ha.innerHTML = `<i class="fa-solid fa-user-doctor"></i>`;
-    }
+    if (ha) ha.innerHTML = u.profileImage
+      ? `<img src="${u.profileImage}" alt="${u.name}">`
+      : `<i class="fa-solid fa-user-doctor"></i>`;
 
     // ── View rows ──
-    removeSkel($("viewName"));      $("viewName").textContent      = u.name  || "—";
-    removeSkel($("viewEmail"));     $("viewEmail").textContent     = u.email || "—";
-    removeSkel($("viewRole"));      $("viewRole").textContent      = cap(u.role);
-    removeSkel($("viewLastLogin")); $("viewLastLogin").textContent = fmtDateTime(u.lastLogin);
-    removeSkel($("viewSince"));     $("viewSince").textContent     = fmtDate(u.createdAt);
+    set("viewName",      "skel", u.name  || "—");
+    set("viewEmail",     "skel", u.email || "—");
+    set("viewRole",      "skel", cap(u.role));
+    set("viewLastLogin", "skel", fmtDateTime(u.lastLogin));
+    set("viewSince",     "skel", fmtDate(u.createdAt));
+    console.log("[renderUser] view rows done");
 
-    // ── Edit inputs (always keep in sync) ──
-    $("inpName").value  = u.name  || "";
-    $("inpEmail").value = u.email || "";
-    $("inpRole").value  = cap(u.role);
+    // ── Edit inputs ──
+    set("inpName",  "value", u.name  || "");
+    set("inpEmail", "value", u.email || "");
+    set("inpRole",  "value", cap(u.role));
+    console.log("[renderUser] inputs done");
 
-    // ── Edit avatar thumb ──
+    // ── Avatar thumb ──
     const thumb = $("editAvatarThumb");
     const rmBtn = $("removeImgBtn");
-    if (u.profileImage) {
-      thumb.innerHTML = `<img src="${u.profileImage}" alt="">`;
-      rmBtn.classList.add("show");
-    } else {
-      thumb.innerHTML = `<i class="fa-solid fa-user-doctor"></i>`;
-      rmBtn.classList.remove("show");
-    }
+    if (thumb) thumb.innerHTML = u.profileImage
+      ? `<img src="${u.profileImage}" alt="">`
+      : `<i class="fa-solid fa-user-doctor"></i>`;
+    if (rmBtn) rmBtn.classList.toggle("show", !!u.profileImage);
+    console.log("[renderUser] complete");
   }
 
   // ── 5. Fetch profile from server ──────────────────────────────────────────────
