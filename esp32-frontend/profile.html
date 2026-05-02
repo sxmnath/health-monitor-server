@@ -557,7 +557,7 @@
 <!-- Toast -->
 <div class="p-toast" id="toast"></div>
 
-<!-- auth.js must load before inline script so protectPage/authFetch are defined -->
+<!-- hm-auth: auth helpers inlined to avoid filename-based ad-blocker blocking -->
 <script>
 /* ── hm-auth.js inlined to avoid filename-based blocking ── */
 "use strict";
@@ -617,13 +617,10 @@ function fetchCurrentUser() {
   }).catch(e => console.warn("[fetchCurrentUser]", e.message));
 }
 
-console.log("[hm-auth] loaded OK, token present:", !!getToken());
 </script>
 <script>
   // ── 1. Auth guard ───────────────────────────────────────────────────────────
-  console.log("[profile] script start, token:", getToken() ? "present" : "MISSING");
   if (!protectPage()) {
-    console.warn("[profile] no token — redirecting to /login");
     // Don't throw — let redirect happen naturally
   }
 
@@ -669,7 +666,7 @@ console.log("[hm-auth] loaded OK, token present:", !!getToken());
   function set(id, prop, val) {
     // Safe setter — silently skips if element not in DOM
     const el = $(id);
-    if (!el) { console.warn("[renderUser] missing element:", id); return; }
+    if (!el) return;
     if (prop === "text")  el.textContent = val;
     if (prop === "html")  el.innerHTML   = val;
     if (prop === "value") el.value       = val;
@@ -677,7 +674,6 @@ console.log("[hm-auth] loaded OK, token present:", !!getToken());
   }
 
   function renderUser(u) {
-    console.log("[renderUser] called with", u.name, u.email);
     _user = u;
 
     // ── Topbar ──
@@ -694,7 +690,6 @@ console.log("[hm-auth] loaded OK, token present:", !!getToken());
     set("heroRole",      "skel", cap(u.role));
     set("heroSince",     "skel", fmtDate(u.createdAt));
     set("heroLastLogin", "skel", fmtDateTime(u.lastLogin));
-    console.log("[renderUser] hero done");
 
     const ha = $("heroAvatar");
     if (ha) ha.innerHTML = u.profileImage
@@ -707,13 +702,11 @@ console.log("[hm-auth] loaded OK, token present:", !!getToken());
     set("viewRole",      "skel", cap(u.role));
     set("viewLastLogin", "skel", fmtDateTime(u.lastLogin));
     set("viewSince",     "skel", fmtDate(u.createdAt));
-    console.log("[renderUser] view rows done");
 
     // ── Edit inputs ──
     set("inpName",  "value", u.name  || "");
     set("inpEmail", "value", u.email || "");
     set("inpRole",  "value", cap(u.role));
-    console.log("[renderUser] inputs done");
 
     // ── Avatar thumb ──
     const thumb = $("editAvatarThumb");
@@ -722,27 +715,22 @@ console.log("[hm-auth] loaded OK, token present:", !!getToken());
       ? `<img src="${u.profileImage}" alt="">`
       : `<i class="fa-solid fa-user-doctor"></i>`;
     if (rmBtn) rmBtn.classList.toggle("show", !!u.profileImage);
-    console.log("[renderUser] complete");
   }
 
   // ── 5. Fetch profile from server ──────────────────────────────────────────────
   async function loadProfile() {
-    console.log("[loadProfile] starting fetch to /api/auth/me");
     try {
       const res = await authFetch("/api/auth/me");
-      console.log("[loadProfile] response received — status:", res?.status, "ok:", res?.ok);
-      if (!res || !res.ok) {
+        if (!res || !res.ok) {
         const body = res ? await res.json().catch(() => ({})) : {};
         console.error("[loadProfile] HTTP error", res?.status, body);
         toast("Could not load profile — " + (body.error || "server error"), true);
         return;
       }
       const data = await res.json();
-      console.log("[loadProfile] data received:", JSON.stringify(data).slice(0, 200));
       if (data.user) {
         renderUser(data.user);
-        console.log("[loadProfile] renderUser called OK");
-      } else {
+          } else {
         console.error("[loadProfile] no user in response", data);
         toast("Profile data missing from server response", true);
       }
