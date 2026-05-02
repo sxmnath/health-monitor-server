@@ -558,7 +558,7 @@
 <div class="p-toast" id="toast"></div>
 
 <!-- auth.js must load before inline script so protectPage/authFetch are defined -->
-<script src="auth.js"></script>
+<script src="hm-auth.js"></script>
 <script>
   // ── 1. Auth guard — runs synchronously, hides page and redirects if no token ─
   if (!protectPage()) throw new Error("unauthenticated");
@@ -568,7 +568,8 @@
   let _pendingImg   = undefined;  // undefined=no change, null=remove, string=dataURL
 
   // ── 3. Utilities ──────────────────────────────────────────────────────────────
-  const $ = id => document.getElementById(id);
+  // var (not const) so onclick handlers can access it before full script parse
+  var $ = id => document.getElementById(id);
 
   function fmtDate(iso) {
     if (!iso) return "—";
@@ -906,10 +907,10 @@
     $("sidebar")?.classList.toggle("collapsed");
   });
 
-  // ── 12. Init ──────────────────────────────────────────────────────────────────
-  // The <script> tag is at the bottom of <body>, so all DOM elements already
-  // exist when this runs. DOMContentLoaded may have already fired at this point,
-  // so call loadProfile() directly instead of waiting for the event.
+  // ── 12. Init — load on DOMContentLoaded ──────────────────────────────────────
+  // protectPage() already ran synchronously above and confirmed a token exists.
+  // loadProfile() uses authFetch which needs the DOM to be ready for the
+  // never-resolving-promise redirect path, but the fetch itself is fine here.
   loadProfile();
 </script>
 </body>
