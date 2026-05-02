@@ -558,10 +558,74 @@
 <div class="p-toast" id="toast"></div>
 
 <!-- auth.js must load before inline script so protectPage/authFetch are defined -->
-<script src="hm-auth.js"></script>
 <script>
-  // ── 1. Auth guard — runs synchronously, hides page and redirects if no token ─
-  if (!protectPage()) throw new Error("unauthenticated");
+/* ── hm-auth.js inlined to avoid filename-based blocking ── */
+"use strict";
+const TOKEN_KEY = "hm_token";
+function getToken()      { return localStorage.getItem(TOKEN_KEY); }
+function setToken(t)     { localStorage.setItem(TOKEN_KEY, t); }
+function clearToken()    { localStorage.removeItem(TOKEN_KEY); }
+
+function protectPage() {
+  if (!getToken()) {
+    document.documentElement.style.visibility = "hidden";
+    window.location.replace("/login");
+    return false;
+  }
+  return true;
+}
+function publicOnlyPage() {
+  if (getToken()) {
+    document.documentElement.style.visibility = "hidden";
+    window.location.replace("/");
+    return false;
+  }
+  return true;
+}
+function requireAuth() { return protectPage(); }
+
+async function authFetch(url, options = {}) {
+  const token = getToken();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    clearToken();
+    window.location.replace("/login");
+    return new Promise(() => {});
+  }
+  return res;
+}
+
+function logout() {
+  clearToken();
+  window.location.replace("/login");
+}
+
+function fetchCurrentUser() {
+  const nameEl = document.getElementById("topbarName") || document.getElementById("topbarUserName");
+  const avatarEl = document.getElementById("topbarAvatar");
+  return authFetch("/api/auth/me").then(r => r.json()).then(data => {
+    const u = data.user;
+    if (!u) return;
+    if (nameEl) nameEl.textContent = u.name ? u.name.split(" ")[0] : u.email;
+    if (avatarEl && u.profileImage)
+      avatarEl.innerHTML = `<img src="${u.profileImage}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  }).catch(e => console.warn("[fetchCurrentUser]", e.message));
+}
+
+console.log("[hm-auth] loaded OK, token present:", !!getToken());
+</script>
+<script>
+  // ── 1. Auth guard ───────────────────────────────────────────────────────────
+  console.log("[profile] script start, token:", getToken() ? "present" : "MISSING");
+  if (!protectPage()) {
+    console.warn("[profile] no token — redirecting to /login");
+    // Don't throw — let redirect happen naturally
+  }
 
   // ── 2. Module-level state ─────────────────────────────────────────────────────
   let _user         = null;   // canonical user object from the server
