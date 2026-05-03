@@ -35,12 +35,19 @@ const io = new Server(server, {
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc:  ["'self'"],
-      scriptSrc:   ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com", "fonts.googleapis.com"],
-      styleSrc:    ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdnjs.cloudflare.com"],
-      fontSrc:     ["'self'", "fonts.gstatic.com", "cdnjs.cloudflare.com"],
-      imgSrc:      ["'self'", "data:", "blob:"],
-      connectSrc:  ["'self'", "wss:", "ws:"],
+      defaultSrc:     ["'self'"],
+      // Scripts: self + inline (needed for onclick handlers and inline <script> blocks)
+      // + cdnjs (Font Awesome) + jsdelivr (Chart.js) + fonts.googleapis.com
+      scriptSrc:      ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com",
+                       "cdn.jsdelivr.net", "fonts.googleapis.com"],
+      // Helmet sets script-src-attr to 'none' by default, which blocks onclick=""
+      // Setting it to unsafe-inline re-enables inline event handlers.
+      scriptSrcAttr:  ["'unsafe-inline'"],
+      styleSrc:       ["'self'", "'unsafe-inline'", "fonts.googleapis.com",
+                       "cdnjs.cloudflare.com"],
+      fontSrc:        ["'self'", "fonts.gstatic.com", "cdnjs.cloudflare.com"],
+      imgSrc:         ["'self'", "data:", "blob:"],
+      connectSrc:     ["'self'", "wss:", "ws:"],
     },
   },
   // HSTS — tell browsers to always use HTTPS (1 year)
