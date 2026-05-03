@@ -6,7 +6,6 @@ const mongoose        = require("mongoose");
 const cors            = require("cors");
 const helmet          = require("helmet");
 const rateLimit       = require("express-rate-limit");
-const mongoSanitize   = require("express-mongo-sanitize");
 const http            = require("http");
 const path            = require("path");
 const { Server }      = require("socket.io");
@@ -66,9 +65,27 @@ app.use(express.json({ limit: "4mb" }));
 app.use(express.urlencoded({ extended: false, limit: "4mb" }));
 
 // ─── NoSQL injection sanitisation ────────────────────────────────────────────
-// Strips keys that start with $ or contain . from req.body, req.query, req.params
-// Prevents MongoDB operator injection attacks e.g. { email: { $gt: "" } }
-app.use(mongoSanitize());
+// express-mongo-sanitize v2 is incompatible with Express 5 (req.query is
+// a getter-only property in Express 5). We implement the same protection
+// manually — recursively stripping keys that start with $ from req.body only,
+// which is where injection attacks arrive.
+function stripDollarKeys(obj) {
+  if (Array.isArray(obj)) return obj.map(stripDollarKeys);
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj)
+        .filter(([k]) => !k.startsWith("$"))
+        .map(([k, v]) => [k, stripDollarKeys(v)])
+    );
+  }
+  return obj;
+}
+app.use((req, _res, next) => {
+  if (req.body && typeof req.body === "object") {
+    req.body = stripDollarKeys(req.body);
+  }
+  next();
+});
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
 // Auth routes: strict limit — 20 requests per 15 minutes per IP
