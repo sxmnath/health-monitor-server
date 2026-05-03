@@ -9,15 +9,29 @@ function getToken()          { return localStorage.getItem(TOKEN_KEY); }
 function setToken(token)     { localStorage.setItem(TOKEN_KEY, token); }
 function clearToken()        { localStorage.removeItem(TOKEN_KEY); }
 
-// ── Auth guard — call at top of every protected page ──────────────────────────
-// Redirects to /login if no valid token is stored.
-function requireAuth() {
+// ── Auth guards ───────────────────────────────────────────────────────────────
+// protectPage(): call at top of protected pages — redirects to /login if no token
+function protectPage() {
   if (!getToken()) {
+    document.documentElement.style.visibility = "hidden";
     window.location.replace("/login");
     return false;
   }
   return true;
 }
+
+// publicOnlyPage(): call at top of login/signup — redirects to / if already logged in
+function publicOnlyPage() {
+  if (getToken()) {
+    document.documentElement.style.visibility = "hidden";
+    window.location.replace("/");
+    return false;
+  }
+  return true;
+}
+
+// requireAuth(): alias kept for backwards compatibility
+function requireAuth() { return protectPage(); }
 
 // ── Authenticated fetch wrapper ───────────────────────────────────────────────
 // Drop-in replacement for fetch() that:
