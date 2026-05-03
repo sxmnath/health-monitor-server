@@ -1,25 +1,104 @@
 "use strict";
 require("dotenv").config();
 
-const express    = require("express");
-const mongoose   = require("mongoose");
-const cors       = require("cors");
-const http       = require("http");
-const path       = require("path");
-const { Server } = require("socket.io");
-const User          = require("./models/User");
+const express         = require("express");
+const mongoose        = require("mongoose");
+const cors            = require("cors");
+const helmet          = require("helmet");
+const rateLimit       = require("express-rate-limit");
+const mongoSanitize   = require("express-mongo-sanitize");
+const http            = require("http");
+const path            = require("path");
+const { Server }      = require("socket.io");
+const User            = require("./models/User");
 const { protect, requireRole } = require("./middleware/auth");
-const authRouter    = require("./routes/auth");
+const authRouter      = require("./routes/auth");
 
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server, { cors: { origin: "*" } });
 
-app.use(cors());
-app.use(express.json());
+// ─── Allowed origin ───────────────────────────────────────────────────────────
+// In production, restrict to your actual frontend domain.
+// Falls back to * in development so local testing works without config changes.
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
+
+const io = new Server(server, {
+  cors: {
+    origin:      ALLOWED_ORIGIN,
+    credentials: ALLOWED_ORIGIN !== "*",
+  },
+});
+
+// ─── Security headers (Helmet) ────────────────────────────────────────────────
+// Sets: X-Frame-Options, X-Content-Type-Options, Referrer-Policy,
+//       Strict-Transport-Security (HSTS), X-XSS-Protection, and more.
+// contentSecurityPolicy is configured to allow the CDN assets this app uses.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:  ["'self'"],
+      scriptSrc:   ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com", "fonts.googleapis.com"],
+      styleSrc:    ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdnjs.cloudflare.com"],
+      fontSrc:     ["'self'", "fonts.gstatic.com", "cdnjs.cloudflare.com"],
+      imgSrc:      ["'self'", "data:", "blob:"],
+      connectSrc:  ["'self'", "wss:", "ws:"],
+    },
+  },
+  // HSTS — tell browsers to always use HTTPS (1 year)
+  strictTransportSecurity: {
+    maxAge:            31536000,
+    includeSubDomains: true,
+  },
+}));
+
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+app.use(cors({
+  origin:      ALLOWED_ORIGIN,
+  credentials: ALLOWED_ORIGIN !== "*",
+  methods:     ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
+// ─── Body parsing — size limits prevent payload bombing ───────────────────────
+// Profile images are base64 — a 2MB image becomes ~2.7MB base64.
+// We set 4MB here to accommodate that with headroom, but no more.
+app.use(express.json({ limit: "4mb" }));
+app.use(express.urlencoded({ extended: false, limit: "4mb" }));
+
+// ─── NoSQL injection sanitisation ────────────────────────────────────────────
+// Strips keys that start with $ or contain . from req.body, req.query, req.params
+// Prevents MongoDB operator injection attacks e.g. { email: { $gt: "" } }
+app.use(mongoSanitize());
+
+// ─── Rate limiting ────────────────────────────────────────────────────────────
+// Auth routes: strict limit — 20 requests per 15 minutes per IP
+// This blocks brute-force password attacks and signup spam.
+const authLimiter = rateLimit({
+  windowMs:         15 * 60 * 1000,  // 15 minutes
+  max:              20,
+  standardHeaders:  true,
+  legacyHeaders:    false,
+  message:          { error: "Too many requests. Please wait a few minutes and try again." },
+  skipSuccessfulRequests: false,
+});
+
+// API routes: generous limit — 300 requests per minute per IP
+// Protects against scraping / DoS while not affecting normal dashboard use.
+const apiLimiter = rateLimit({
+  windowMs:         60 * 1000,       // 1 minute
+  max:              300,
+  standardHeaders:  true,
+  legacyHeaders:    false,
+  message:          { error: "Too many requests. Please slow down." },
+});
+
 app.use((req, _res, next) => { req.io = io; next(); });
-// ─── Auth Routes (public — no token needed) ──────────────────────────────────
-app.use("/api/auth", authRouter);
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+// Auth routes get the strict rate limiter
+app.use("/api/auth", authLimiter, authRouter);
+// All other API routes get the generous limiter
+app.use("/api", apiLimiter);
 
 app.use(express.static(path.join(__dirname, "../esp32-frontend"), { index: false }));
 
@@ -514,5 +593,24 @@ function demoPatients() {
 }
 
 // ─── Start ────────────────────────────────────────────────────────────────────
+// ─── Global error handler ─────────────────────────────────────────────────────
+// Catches any unhandled errors passed via next(err).
+// Never leaks stack traces or internal details in production.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
+  const isDev = process.env.NODE_ENV !== "production";
+  console.error("[Unhandled Error]", err);
+
+  // Handle payload too large (from express.json size limit)
+  if (err.type === "entity.too.large") {
+    return res.status(413).json({ error: "Request payload too large. Maximum size is 4 MB." });
+  }
+
+  res.status(err.status || 500).json({
+    error: isDev ? (err.message || "Internal server error") : "Internal server error",
+    ...(isDev && { stack: err.stack }),
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`[Server] Running on port ${PORT}`));
