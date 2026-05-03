@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Background circle -->
-  <circle cx="32" cy="32" r="32" fill="#0ea5e9"/>
-  <!-- Person head -->
-  <circle cx="32" cy="18" r="8" fill="white"/>
-  <!-- Person body -->
-  <path d="M16 52 Q16 36 32 36 Q48 36 48 52" fill="white"/>
-  <!-- Heartbeat line across body area -->
-  <polyline points="18,46 23,46 26,40 29,52 32,44 35,48 38,46 46,46"
-            fill="none" stroke="#0ea5e9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Dark navy background matching sidebar -->
+  <rect width="64" height="64" rx="14" fill="#1a1a2e"/>
+  <!-- Heart shape in sidebar accent pink -->
+  <path d="M32 50 C32 50 10 36 10 22 C10 15 15.5 10 22 10 C26.2 10 30 12.5 32 16 C34 12.5 37.8 10 42 10 C48.5 10 54 15 54 22 C54 36 32 50 32 50Z"
+        fill="#e8b4cb"/>
+  <!-- ECG / heartbeat line across the heart -->
+  <polyline points="14,28 20,28 23,21 27,35 31,24 34,31 37,28 50,28"
+            fill="none" stroke="#1a1a2e" stroke-width="2.8"
+            stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
