@@ -10,6 +10,7 @@ const { Server } = require("socket.io");
 const User          = require("./models/User");
 const { protect, requireRole, authorizeRoles } = require("./middleware/auth");
 const authRouter    = require("./routes/auth");
+const adminRouter   = require("./routes/admin");
 
 const app    = express();
 const server = http.createServer(app);
@@ -19,7 +20,8 @@ app.use(cors());
 app.use(express.json());
 app.use((req, _res, next) => { req.io = io; next(); });
 // ─── Auth Routes (public — no token needed) ──────────────────────────────────
-app.use("/api/auth", authRouter);
+app.use("/api/auth",  authRouter);
+app.use("/api/admin", adminRouter);
 
 app.use(express.static(path.join(__dirname, "../esp32-frontend"), { index: false }));
 
@@ -259,7 +261,7 @@ app.get("/api/patients/:id", protect, async (req, res) => {
 
 // ─── POST /api/patients ───────────────────────────────────────────────────────
 // Create or update patient profile
-app.post("/api/patients", protect, authorizeRoles("admin", "doctor", "nurse"), async (req, res) => {
+app.post("/api/patients", protect, authorizeRoles("admin","doctor","nurse"), async (req, res) => {
   try {
     const { patient_id, deviceId } = req.body;
     if (!patient_id || !deviceId) return res.status(400).json({ error: "patient_id and deviceId required" });
@@ -279,7 +281,7 @@ app.post("/api/patients", protect, authorizeRoles("admin", "doctor", "nurse"), a
 
 // ─── PATCH /api/patients/:id ──────────────────────────────────────────────────
 // Partial profile update (used by edit modal)
-app.patch("/api/patients/:id", protect, authorizeRoles("admin", "doctor", "nurse"), async (req, res) => {
+app.patch("/api/patients/:id", protect, authorizeRoles("admin","doctor","nurse"), async (req, res) => {
   try {
     const allowed = ["name","age","gender","bloodType","weight","height","roomNo","ward","physician","diagnosis","phone","notes"];
     const update  = {};
@@ -368,7 +370,7 @@ app.get("/api/patients/:id/history", protect, async (req, res) => {
 
 // ─── DELETE /api/patients/:id/data ───────────────────────────────────────────
 // Reset all vitals for a patient (keeps profile)
-app.delete("/api/patients/:id/data", protect, authorizeRoles("admin", "doctor"), async (req, res) => {
+app.delete("/api/patients/:id/data", protect, authorizeRoles("admin","doctor"), async (req, res) => {
   try {
     const result = await SensorData.deleteMany({ patient_id: req.params.id });
     const patient = await Patient.findOne({ patient_id: req.params.id }).lean();
@@ -407,7 +409,7 @@ app.delete("/api/patients/:id/profile", protect, authorizeRoles("admin"), async 
 
 // ─── Legacy /api/patient/:id routes (backwards compat) ───────────────────────
 app.get("/api/patient/:id",        protect, (req, res) => res.redirect(`/api/patients/${req.params.id}`));
-app.patch("/api/patient/:id",      protect, authorizeRoles("admin", "doctor", "nurse"), async (req, res) => {
+app.patch("/api/patient/:id",      protect, authorizeRoles("admin","doctor","nurse"), async (req, res) => {
   try {
     const allowed = ["name","age","gender","bloodType","weight","height","roomNo","ward","physician","diagnosis","phone","notes"];
     const update  = {};
@@ -495,6 +497,7 @@ app.get("/index.html", (_req, res) => res.redirect("/"));
 app.get("/",           (_req, res) => res.sendFile(path.join(__dirname, "../esp32-frontend/patients.html")));
 app.get("/patient",    (_req, res) => res.sendFile(path.join(__dirname, "../esp32-frontend/patient.html")));
 app.get("/profile",    (_req, res) => res.sendFile(path.join(__dirname, "../esp32-frontend/profile.html")));
+app.get("/admin",      (_req, res) => res.sendFile(path.join(__dirname, "../esp32-frontend/admin.html")));
 app.get("/login",      (_req, res) => res.sendFile(path.join(__dirname, "../esp32-frontend/login.html")));
 app.get("/signup",     (_req, res) => res.sendFile(path.join(__dirname, "../esp32-frontend/signup.html")));
 

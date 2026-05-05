@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="/socket.io/socket.io.js"></script>
+
+  <style>#adminNavLink{display:none}</style>
 </head>
 <body>
   <div class="app-layout">
@@ -366,5 +368,21 @@
   </div>
   <script src="hm-auth.js"></script>
   <script src="app.js"></script>
+
+  <script>
+    // Show Admin Panel sidebar link only for admins — purely cosmetic
+    // The admin page enforces role server-side
+    (function() {
+      try {
+        var token = localStorage.getItem("hm_token");
+        if (!token) return;
+        var payload = JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+        if (payload.role === "admin") {
+          var link = document.getElementById("adminNavLink");
+          if (link) link.style.display = "flex";
+        }
+      } catch(_) {}
+    })();
+  </script>
 </body>
 </html>

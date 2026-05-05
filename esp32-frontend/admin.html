@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <title>healthMonitor — Admin Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    .admin-outer { padding: 28px 28px 64px; }
+    .admin-page-title {
+      font-size: 1.3rem; font-weight: 700; color: var(--text-primary);
+      letter-spacing: -0.02em; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .admin-page-title i { color: var(--sidebar-accent); font-size: 1.1rem; }
+
+    /* Stats */
+    .admin-stats { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .astat {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 14px 20px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: var(--shadow-sm); min-width: 130px;
+    }
+    .astat-icon {
+      width: 36px; height: 36px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; flex-shrink: 0;
+    }
+    .astat-icon.total    { background: var(--blue-light);           color: var(--blue); }
+    .astat-icon.admin    { background: rgba(232,180,203,0.2);       color: #a0607a; }
+    .astat-icon.active   { background: var(--normal-light);         color: var(--normal); }
+    .astat-icon.inactive { background: var(--critical-light);       color: var(--critical); }
+    .astat-val   { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+    .astat-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+
+    /* Table card */
+    .user-table-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-sm); overflow: hidden;
+    }
+    .user-table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+    }
+    .user-table-title {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text-muted);
+      display: flex; align-items: center; gap: 7px;
+    }
+    .user-table-title i { color: var(--sidebar-accent); }
+    .user-count-badge {
+      font-size: 0.75rem; font-weight: 600;
+      background: var(--blue-light); color: var(--blue);
+      border: 1px solid var(--blue-mid); border-radius: 99px; padding: 2px 10px;
+    }
+
+    /* Table */
+    .user-table { width: 100%; border-collapse: collapse; }
+    .user-table th {
+      text-align: left; font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);
+      padding: 10px 20px; background: var(--surface-2);
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    .user-table td {
+      padding: 13px 20px; border-bottom: 1px solid var(--border);
+      font-size: 0.87rem; vertical-align: middle;
+    }
+    .user-table tr:last-child td { border-bottom: none; }
+    .user-table tr { transition: background 0.2s ease-out; }
+    .user-table tr:hover td { background: var(--surface-2); }
+    .user-table tr.is-inactive td { opacity: 0.5; }
+    .user-table tr.is-self td { background: var(--blue-light) !important; }
+
+    /* User cell */
+    .user-name-cell { display: flex; align-items: center; gap: 10px; }
+    .user-avatar-sm {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--sidebar-bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; overflow: hidden;
+    }
+    .user-avatar-sm i   { font-size: 0.8rem; color: var(--sidebar-accent); }
+    .user-avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
+    .user-full-name { font-weight: 600; color: var(--text-primary); }
+    .user-id-label  { font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 1px; }
+    .user-email     { color: var(--text-secondary); font-size: 0.84rem; }
+    .self-badge {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      background: var(--blue-light); color: var(--blue); border: 1px solid var(--blue-mid);
+      padding: 1px 6px; border-radius: 99px; margin-left: 5px;
+    }
+
+    /* Chips */
+    .role-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 3px 9px; border-radius: 99px;
+    }
+    .role-chip.admin  { background: rgba(232,180,203,0.2); color: #a0607a; }
+    .role-chip.doctor { background: var(--blue-light);     color: var(--blue); }
+    .role-chip.nurse  { background: var(--normal-light);   color: var(--normal); }
+    .role-chip.viewer { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+
+    .status-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.76rem; font-weight: 600; padding: 3px 9px; border-radius: 99px;
+    }
+    .status-chip.active   { background: var(--normal-light);   color: var(--normal); }
+    .status-chip.inactive { background: var(--critical-light); color: var(--critical); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* Actions */
+    .actions-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .role-select {
+      font-family: var(--font); font-size: 0.8rem; font-weight: 500;
+      color: var(--text-secondary); background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 5px 26px 5px 9px; appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+      cursor: pointer; outline: none; transition: border-color 0.2s ease-out;
+    }
+    .role-select:hover  { border-color: var(--blue); }
+    .role-select:focus  { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-light); }
+    .role-select:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Toggle */
+    .toggle-wrap {
+      display: flex; align-items: center; gap: 7px;
+      cursor: pointer; user-select: none;
+    }
+    .toggle-wrap.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+    .toggle-track {
+      width: 36px; height: 20px; border-radius: 99px; background: var(--border-mid);
+      position: relative; transition: background 0.2s ease-out; flex-shrink: 0;
+    }
+    .toggle-track.on { background: var(--normal); }
+    .toggle-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; border-radius: 50%; background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s ease-out;
+    }
+    .toggle-track.on .toggle-thumb { transform: translateX(16px); }
+    .toggle-label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
+
+    /* States */
+    .table-state { padding: 48px 20px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+    .table-state i { font-size: 1.6rem; margin-bottom: 10px; display: block; }
+
+    /* Toast */
+    .a-toast {
+      position: fixed; bottom: 26px; right: 26px;
+      display: flex; align-items: center; gap: 9px;
+      padding: 11px 17px; border-radius: var(--radius-md);
+      font-size: 0.85rem; font-weight: 500; box-shadow: var(--shadow-lg);
+      z-index: 9999; opacity: 0; transform: translateY(14px);
+      transition: opacity 0.22s ease-out, transform 0.22s ease-out; pointer-events: none;
+    }
+    .a-toast.show { opacity: 1; transform: translateY(0); }
+    .a-toast.ok  { background: var(--normal-light);   color: var(--normal);   border: 1px solid #a8e6c4; }
+    .a-toast.bad { background: var(--critical-light); color: var(--critical); border: 1px solid #f4b8b8; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <button class="sidebar-collapse-btn" id="sidebarToggle" title="Collapse sidebar">
+        <i class="fa-solid fa-heart-pulse logo-icon"></i>
+        <span class="logo-text">healthMonitor</span>
+        <i class="fa-solid fa-chevron-left collapse-arrow"></i>
+      </button>
+      <span class="sidebar-tagline">Real-time patient monitoring</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/" class="nav-item" title="Ward Overview">
+        <i class="fa-solid fa-building-columns"></i>
+        <span>Ward Overview</span>
+      </a>
+      <a href="/profile" class="nav-item" title="My Profile">
+        <i class="fa-solid fa-circle-user"></i>
+        <span>My Profile</span>
+      </a>
+      <a href="/admin" class="nav-item active" title="Admin Panel">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Admin Panel</span>
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="nav-item logout-btn" onclick="logout()" title="Logout">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        <span>Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="ward-title-row">
+        <h1 class="ward-page-title">
+          <i class="fa-solid fa-shield-halved"></i>
+          Admin Panel
+        </h1>
+      </div>
+      <div class="topbar-meta">
+        <div class="topbar-user">
+          <span class="topbar-greeting">Hello, <strong id="topbarUserName">…</strong></span>
+          <a href="/profile" class="topbar-avatar" id="topbarAvatar" title="View profile">
+            <i class="fa-solid fa-user-doctor"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-outer">
+      <h1 class="admin-page-title">
+        <i class="fa-solid fa-users-gear"></i> User Management
+      </h1>
+
+      <div class="admin-stats">
+        <div class="astat">
+          <div class="astat-icon total"><i class="fa-solid fa-users"></i></div>
+          <div><div class="astat-val" id="statTotal">—</div><div class="astat-label">Total Users</div></div>
+        </div>
+        <div class="astat">
+          <div class="astat-icon admin"><i class="fa-solid fa-shield-halved"></i></div>
+          <div><div class="astat-val" id="statAdmins">—</div><div class="astat-label">Admins</div></div>
+        </div>
+        <div class="astat">
+          <div class="astat-icon active"><i class="fa-solid fa-circle-check"></i></div>
+          <div><div class="astat-val" id="statActive">—</div><div class="astat-label">Active</div></div>
+        </div>
+        <div class="astat">
+          <div class="astat-icon inactive"><i class="fa-solid fa-circle-xmark"></i></div>
+          <div><div class="astat-val" id="statInactive">—</div><div class="astat-label">Inactive</div></div>
+        </div>
+      </div>
+
+      <div class="user-table-card">
+        <div class="user-table-header">
+          <span class="user-table-title">
+            <i class="fa-solid fa-table-list"></i> All Users
+          </span>
+          <span class="user-count-badge" id="userCountBadge">—</span>
+        </div>
+        <div id="tableWrap">
+          <div class="table-state">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            Loading users…
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="a-toast" id="toast"></div>
+
+<script src="hm-auth.js"></script>
+<script>
+  if (!protectPage()) throw new Error("unauthenticated");
+
+  // Non-admins get a clear rejection without a crash
+  if (!hasRole("admin")) {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;'
+      + 'height:100vh;font-family:var(--font);flex-direction:column;gap:12px;color:var(--text-secondary)">'
+      + '<i class="fa-solid fa-lock" style="font-size:2.5rem;color:var(--critical)"></i>'
+      + '<h2 style="color:var(--text-primary)">Access Denied</h2><p>Admin privileges required.</p>'
+      + '<a href="/" style="color:var(--blue);font-weight:600;text-decoration:none">← Back to Ward Overview</a>'
+      + '</div>';
+    throw new Error("forbidden");
+  }
+
+  var _users  = [];
+  var _selfId = getTokenPayload()?.id;
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  function toast(msg, isErr) {
+    var el = document.getElementById("toast");
+    el.className = "a-toast " + (isErr ? "bad" : "ok");
+    el.innerHTML = '<i class="fa-solid fa-' + (isErr ? "circle-exclamation" : "circle-check") + '"></i> ' + msg;
+    el.classList.add("show");
+    clearTimeout(el._t);
+    el._t = setTimeout(function() { el.classList.remove("show"); }, 3500);
+  }
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  function updateStats(users) {
+    document.getElementById("statTotal").textContent    = users.length;
+    document.getElementById("statAdmins").textContent   = users.filter(function(u){ return u.role==="admin"; }).length;
+    document.getElementById("statActive").textContent   = users.filter(function(u){ return u.isActive!==false; }).length;
+    document.getElementById("statInactive").textContent = users.filter(function(u){ return u.isActive===false; }).length;
+    document.getElementById("userCountBadge").textContent = users.length + " user" + (users.length!==1?"s":"");
+  }
+
+  // ── Role icon map ──────────────────────────────────────────────────────────
+  function roleIcon(role) {
+    return {admin:"shield-halved",doctor:"user-doctor",nurse:"kit-medical",viewer:"eye"}[role]||"user";
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function renderTable(users) {
+    _users = users;
+    updateStats(users);
+
+    if (!users.length) {
+      document.getElementById("tableWrap").innerHTML =
+        '<div class="table-state"><i class="fa-solid fa-users-slash"></i>No users found.</div>';
+      return;
+    }
+
+    var rows = users.map(function(u) {
+      var uid        = String(u.id || u._id);
+      var isSelf     = uid === String(_selfId);
+      var isInactive = u.isActive === false;
+
+      var avatar = u.profileImage
+        ? '<img src="'+u.profileImage+'" alt="">'
+        : '<i class="fa-solid fa-user-doctor"></i>';
+
+      var opts = ["admin","doctor","nurse","viewer"].map(function(r) {
+        return '<option value="'+r+'"'+(u.role===r?" selected":"")+'>'+r.charAt(0).toUpperCase()+r.slice(1)+'</option>';
+      }).join("");
+
+      return '<tr class="'+(isSelf?"is-self ":"")+(isInactive?"is-inactive":"")+'" data-uid="'+uid+'">'
+        +'<td><div class="user-name-cell">'
+          +'<div class="user-avatar-sm">'+avatar+'</div>'
+          +'<div><div class="user-full-name">'+(u.name||"—")+(isSelf?'<span class="self-badge">You</span>':'')+'</div>'
+          +'<div class="user-id-label">'+uid.slice(-8)+'</div></div>'
+        +'</div></td>'
+        +'<td class="user-email">'+(u.email||"—")+'</td>'
+        +'<td><span class="role-chip '+u.role+'">'
+          +'<i class="fa-solid fa-'+roleIcon(u.role)+'"></i> '
+          +u.role.charAt(0).toUpperCase()+u.role.slice(1)
+        +'</span></td>'
+        +'<td><span class="status-chip '+(isInactive?"inactive":"active")+'">'
+          +'<span class="status-dot"></span>'+(isInactive?"Inactive":"Active")
+        +'</span></td>'
+        +'<td><div class="actions-cell">'
+          +'<select class="role-select"'+(isSelf?" disabled":"")
+            +' onchange="changeRole(\''+uid+'\',this.value,this)">'+opts+'</select>'
+          +'<div class="toggle-wrap'+(isSelf?" disabled":"")+'" '
+            +'onclick="toggleStatus(\''+uid+'\','+(isInactive?"false":"true")+',this)">'
+            +'<div class="toggle-track'+(isInactive?"":" on")+'">'
+              +'<div class="toggle-thumb"></div>'
+            +'</div>'
+            +'<span class="toggle-label">'+(isInactive?"Activate":"Active")+'</span>'
+          +'</div>'
+        +'</div></td>'
+      +'</tr>';
+    }).join("");
+
+    document.getElementById("tableWrap").innerHTML =
+      '<table class="user-table"><thead><tr>'
+      +'<th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th>'
+      +'</tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+
+  // ── Load users ─────────────────────────────────────────────────────────────
+  async function loadUsers() {
+    try {
+      var res  = await authFetch("/api/admin/users");
+      var data = await res.json();
+      if (!res.ok) { toast(data.error || "Failed to load users", true); return; }
+      renderTable(data.users || []);
+    } catch(e) {
+      console.error("[loadUsers]", e);
+      toast("Could not reach server", true);
+    }
+  }
+
+  // ── Change role ────────────────────────────────────────────────────────────
+  async function changeRole(uid, newRole, sel) {
+    var user     = _users.find(function(u){ return String(u.id||u._id)===uid; });
+    var prevRole = user ? user.role : newRole;
+    sel.disabled = true;
+    try {
+      var res  = await authFetch("/api/admin/users/"+uid+"/role", {
+        method:"PATCH", body:JSON.stringify({role:newRole})
+      });
+      var data = await res.json();
+      if (res.ok) {
+        if (user) user.role = newRole;
+        toast(data.message || "Role updated");
+        renderTable(_users);
+      } else {
+        sel.value = prevRole;
+        toast(data.error || "Failed to update role", true);
+        sel.disabled = false;
+      }
+    } catch(e) {
+      sel.value = prevRole;
+      sel.disabled = false;
+      toast("Could not reach server", true);
+    }
+  }
+
+  // ── Toggle status ──────────────────────────────────────────────────────────
+  async function toggleStatus(uid, currentlyActiveStr, el) {
+    var currentlyActive = currentlyActiveStr === "true" || currentlyActiveStr === true;
+    var newActive = !currentlyActive;
+    el.classList.add("disabled");
+    try {
+      var res  = await authFetch("/api/admin/users/"+uid+"/status", {
+        method:"PATCH", body:JSON.stringify({isActive:newActive})
+      });
+      var data = await res.json();
+      if (res.ok) {
+        var user = _users.find(function(u){ return String(u.id||u._id)===uid; });
+        if (user) user.isActive = newActive;
+        toast(data.message || "Status updated");
+        renderTable(_users);
+      } else {
+        el.classList.remove("disabled");
+        toast(data.error || "Failed to update status", true);
+      }
+    } catch(e) {
+      el.classList.remove("disabled");
+      toast("Could not reach server", true);
+    }
+  }
+
+  // ── Topbar ─────────────────────────────────────────────────────────────────
+  async function loadTopbar() {
+    try {
+      var res  = await authFetch("/api/auth/me");
+      var data = await res.json();
+      var u    = data.user;
+      if (!u) return;
+      var n = document.getElementById("topbarUserName");
+      if (n) n.textContent = u.name ? u.name.split(" ")[0] : u.email;
+      var a = document.getElementById("topbarAvatar");
+      if (a && u.profileImage)
+        a.innerHTML = '<img src="'+u.profileImage+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+    } catch(_) {}
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  loadTopbar();
+  loadUsers();
+  document.getElementById("sidebarToggle")?.addEventListener("click", function() {
+    document.getElementById("sidebar")?.classList.toggle("collapsed");
+  });
+</script>
+</body>
+</html>

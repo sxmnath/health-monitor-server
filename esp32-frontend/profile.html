@@ -298,6 +298,8 @@
     }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
   </style>
+
+  <style>#adminNavLink{display:none}</style>
 </head>
 <body>
 <div class="app-layout">
@@ -403,7 +405,14 @@
             <span class="vrow-label">Role</span>
             <span class="vrow-val skel" id="viewRole">—</span>
           </div>
-
+          <div class="vrow">
+            <span class="vrow-label">Last Login</span>
+            <span class="vrow-muted skel" id="viewLastLogin">—</span>
+          </div>
+          <div class="vrow">
+            <span class="vrow-label">Member Since</span>
+            <span class="vrow-muted skel" id="viewSince">—</span>
+          </div>
         </div>
 
         <!-- Edit mode -->
@@ -633,7 +642,8 @@
     set("viewName",      "skel", u.name  || "—");
     set("viewEmail",     "skel", u.email || "—");
     set("viewRole",      "skel", cap(u.role));
-
+    set("viewLastLogin", "skel", fmtDateTime(u.lastLogin));
+    set("viewSince",     "skel", fmtDate(u.createdAt));
 
     // ── Edit inputs ──
     set("inpName",  "value", u.name  || "");
@@ -906,5 +916,21 @@
   // never-resolving-promise redirect path, but the fetch itself is fine here.
   loadProfile();
 </script>
+
+  <script>
+    // Show Admin Panel sidebar link only for admins — purely cosmetic
+    // The admin page enforces role server-side
+    (function() {
+      try {
+        var token = localStorage.getItem("hm_token");
+        if (!token) return;
+        var payload = JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+        if (payload.role === "admin") {
+          var link = document.getElementById("adminNavLink");
+          if (link) link.style.display = "flex";
+        }
+      } catch(_) {}
+    })();
+  </script>
 </body>
 </html>
