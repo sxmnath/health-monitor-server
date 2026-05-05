@@ -1,128 +1,25 @@
 "use strict";
 require("dotenv").config();
 
-const express         = require("express");
-const mongoose        = require("mongoose");
-const cors            = require("cors");
-const helmet          = require("helmet");
-const rateLimit       = require("express-rate-limit");
-const http            = require("http");
-const path            = require("path");
-const { Server }      = require("socket.io");
-const User            = require("./models/User");
-const { protect, requireRole } = require("./middleware/auth");
-const authRouter      = require("./routes/auth");
+const express    = require("express");
+const mongoose   = require("mongoose");
+const cors       = require("cors");
+const http       = require("http");
+const path       = require("path");
+const { Server } = require("socket.io");
+const User          = require("./models/User");
+const { protect, requireRole, authorizeRoles } = require("./middleware/auth");
+const authRouter    = require("./routes/auth");
 
 const app    = express();
 const server = http.createServer(app);
+const io     = new Server(server, { cors: { origin: "*" } });
 
-// ─── Allowed origin ───────────────────────────────────────────────────────────
-// In production, restrict to your actual frontend domain.
-// Falls back to * in development so local testing works without config changes.
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
-
-const io = new Server(server, {
-  cors: {
-    origin:      ALLOWED_ORIGIN,
-    credentials: ALLOWED_ORIGIN !== "*",
-  },
-});
-
-// ─── Security headers (Helmet) ────────────────────────────────────────────────
-// Sets: X-Frame-Options, X-Content-Type-Options, Referrer-Policy,
-//       Strict-Transport-Security (HSTS), X-XSS-Protection, and more.
-// contentSecurityPolicy is configured to allow the CDN assets this app uses.
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc:     ["'self'"],
-      // Scripts: self + inline (needed for onclick handlers and inline <script> blocks)
-      // + cdnjs (Font Awesome) + jsdelivr (Chart.js) + fonts.googleapis.com
-      scriptSrc:      ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com",
-                       "cdn.jsdelivr.net", "fonts.googleapis.com"],
-      // Helmet sets script-src-attr to 'none' by default, which blocks onclick=""
-      // Setting it to unsafe-inline re-enables inline event handlers.
-      scriptSrcAttr:  ["'unsafe-inline'"],
-      styleSrc:       ["'self'", "'unsafe-inline'", "fonts.googleapis.com",
-                       "cdnjs.cloudflare.com"],
-      fontSrc:        ["'self'", "fonts.gstatic.com", "cdnjs.cloudflare.com"],
-      imgSrc:         ["'self'", "data:", "blob:"],
-      connectSrc:     ["'self'", "wss:", "ws:"],
-    },
-  },
-  // HSTS — tell browsers to always use HTTPS (1 year)
-  strictTransportSecurity: {
-    maxAge:            31536000,
-    includeSubDomains: true,
-  },
-}));
-
-// ─── CORS ─────────────────────────────────────────────────────────────────────
-app.use(cors({
-  origin:      ALLOWED_ORIGIN,
-  credentials: ALLOWED_ORIGIN !== "*",
-  methods:     ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
-
-// ─── Body parsing — size limits prevent payload bombing ───────────────────────
-// Profile images are base64 — a 2MB image becomes ~2.7MB base64.
-// We set 4MB here to accommodate that with headroom, but no more.
-app.use(express.json({ limit: "4mb" }));
-app.use(express.urlencoded({ extended: false, limit: "4mb" }));
-
-// ─── NoSQL injection sanitisation ────────────────────────────────────────────
-// express-mongo-sanitize v2 is incompatible with Express 5 (req.query is
-// a getter-only property in Express 5). We implement the same protection
-// manually — recursively stripping keys that start with $ from req.body only,
-// which is where injection attacks arrive.
-function stripDollarKeys(obj) {
-  if (Array.isArray(obj)) return obj.map(stripDollarKeys);
-  if (obj !== null && typeof obj === "object") {
-    return Object.fromEntries(
-      Object.entries(obj)
-        .filter(([k]) => !k.startsWith("$"))
-        .map(([k, v]) => [k, stripDollarKeys(v)])
-    );
-  }
-  return obj;
-}
-app.use((req, _res, next) => {
-  if (req.body && typeof req.body === "object") {
-    req.body = stripDollarKeys(req.body);
-  }
-  next();
-});
-
-// ─── Rate limiting ────────────────────────────────────────────────────────────
-// Auth routes: strict limit — 20 requests per 15 minutes per IP
-// This blocks brute-force password attacks and signup spam.
-const authLimiter = rateLimit({
-  windowMs:         15 * 60 * 1000,  // 15 minutes
-  max:              20,
-  standardHeaders:  true,
-  legacyHeaders:    false,
-  message:          { error: "Too many requests. Please wait a few minutes and try again." },
-  skipSuccessfulRequests: false,
-});
-
-// API routes: generous limit — 300 requests per minute per IP
-// Protects against scraping / DoS while not affecting normal dashboard use.
-const apiLimiter = rateLimit({
-  windowMs:         60 * 1000,       // 1 minute
-  max:              300,
-  standardHeaders:  true,
-  legacyHeaders:    false,
-  message:          { error: "Too many requests. Please slow down." },
-});
-
+app.use(cors());
+app.use(express.json());
 app.use((req, _res, next) => { req.io = io; next(); });
-
-// ─── Routes ───────────────────────────────────────────────────────────────────
-// Auth routes get the strict rate limiter
-app.use("/api/auth", authLimiter, authRouter);
-// All other API routes get the generous limiter
-app.use("/api", apiLimiter);
+// ─── Auth Routes (public — no token needed) ──────────────────────────────────
+app.use("/api/auth", authRouter);
 
 app.use(express.static(path.join(__dirname, "../esp32-frontend"), { index: false }));
 
@@ -362,7 +259,7 @@ app.get("/api/patients/:id", protect, async (req, res) => {
 
 // ─── POST /api/patients ───────────────────────────────────────────────────────
 // Create or update patient profile
-app.post("/api/patients", protect, async (req, res) => {
+app.post("/api/patients", protect, authorizeRoles("admin", "doctor", "nurse"), async (req, res) => {
   try {
     const { patient_id, deviceId } = req.body;
     if (!patient_id || !deviceId) return res.status(400).json({ error: "patient_id and deviceId required" });
@@ -382,7 +279,7 @@ app.post("/api/patients", protect, async (req, res) => {
 
 // ─── PATCH /api/patients/:id ──────────────────────────────────────────────────
 // Partial profile update (used by edit modal)
-app.patch("/api/patients/:id", protect, async (req, res) => {
+app.patch("/api/patients/:id", protect, authorizeRoles("admin", "doctor", "nurse"), async (req, res) => {
   try {
     const allowed = ["name","age","gender","bloodType","weight","height","roomNo","ward","physician","diagnosis","phone","notes"];
     const update  = {};
@@ -471,7 +368,7 @@ app.get("/api/patients/:id/history", protect, async (req, res) => {
 
 // ─── DELETE /api/patients/:id/data ───────────────────────────────────────────
 // Reset all vitals for a patient (keeps profile)
-app.delete("/api/patients/:id/data", protect, async (req, res) => {
+app.delete("/api/patients/:id/data", protect, authorizeRoles("admin", "doctor"), async (req, res) => {
   try {
     const result = await SensorData.deleteMany({ patient_id: req.params.id });
     const patient = await Patient.findOne({ patient_id: req.params.id }).lean();
@@ -487,7 +384,7 @@ app.delete("/api/patients/:id/data", protect, async (req, res) => {
 // ─── DELETE /api/patients/:id/profile ────────────────────────────────────────
 // Clear all profile fields — keeps the Patient document (device stays registered)
 const PROFILE_FIELDS = ["name","age","gender","bloodType","weight","height","roomNo","ward","physician","diagnosis","phone","notes"];
-app.delete("/api/patients/:id/profile", protect, requireRole("admin"), async (req, res) => {
+app.delete("/api/patients/:id/profile", protect, authorizeRoles("admin"), async (req, res) => {
   try {
     const unset = {};
     PROFILE_FIELDS.forEach(k => { unset[k] = ""; });
@@ -510,7 +407,7 @@ app.delete("/api/patients/:id/profile", protect, requireRole("admin"), async (re
 
 // ─── Legacy /api/patient/:id routes (backwards compat) ───────────────────────
 app.get("/api/patient/:id",        protect, (req, res) => res.redirect(`/api/patients/${req.params.id}`));
-app.patch("/api/patient/:id",      protect, async (req, res) => {
+app.patch("/api/patient/:id",      protect, authorizeRoles("admin", "doctor", "nurse"), async (req, res) => {
   try {
     const allowed = ["name","age","gender","bloodType","weight","height","roomNo","ward","physician","diagnosis","phone","notes"];
     const update  = {};
@@ -617,24 +514,5 @@ function demoPatients() {
 }
 
 // ─── Start ────────────────────────────────────────────────────────────────────
-// ─── Global error handler ─────────────────────────────────────────────────────
-// Catches any unhandled errors passed via next(err).
-// Never leaks stack traces or internal details in production.
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, _next) => {
-  const isDev = process.env.NODE_ENV !== "production";
-  console.error("[Unhandled Error]", err);
-
-  // Handle payload too large (from express.json size limit)
-  if (err.type === "entity.too.large") {
-    return res.status(413).json({ error: "Request payload too large. Maximum size is 4 MB." });
-  }
-
-  res.status(err.status || 500).json({
-    error: isDev ? (err.message || "Internal server error") : "Internal server error",
-    ...(isDev && { stack: err.stack }),
-  });
-});
-
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`[Server] Running on port ${PORT}`));

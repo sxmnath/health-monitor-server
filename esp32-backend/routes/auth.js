@@ -10,7 +10,6 @@ const { signToken, protect }     = require("../middleware/auth");
 const signupRules = [
   body("name")
     .trim()
-    .escape()
     .notEmpty().withMessage("Name is required")
     .isLength({ min: 2, max: 80 }).withMessage("Name must be 2–80 characters"),
 
@@ -26,10 +25,6 @@ const signupRules = [
     .matches(/[A-Za-z]/).withMessage("Password must contain at least one letter")
     .matches(/\d/).withMessage("Password must contain at least one number"),
 
-  body("role")
-    .optional()
-    .isIn(["admin", "doctor", "nurse", "viewer"])
-    .withMessage("Role must be one of: admin, doctor, nurse, viewer"),
 ];
 
 const loginRules = [
@@ -60,7 +55,7 @@ function handleValidation(req, res) {
 /**
  * Register a new user.
  *
- * Body: { name, email, password, role? }
+ * Body: { name, email, password }
  *
  * Returns: { user, token }
  */
@@ -68,7 +63,7 @@ router.post("/signup", signupRules, async (req, res) => {
   if (handleValidation(req, res)) return;
 
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     // Check for duplicate email before attempting insert (gives a friendlier error
     // than relying solely on the MongoDB unique index violation)
@@ -84,7 +79,7 @@ router.post("/signup", signupRules, async (req, res) => {
       name,
       email,
       password,           // hashed by pre-save hook in User model
-      role: role || "admin",
+      role: "viewer",  // always viewer — admins promote via admin panel
     });
 
     const token = signToken(user);
@@ -130,12 +125,8 @@ router.post("/login", loginRules, async (req, res) => {
     const user = await User.findOne({ email }).select("+password");
 
     // Use the same generic message for both "not found" and "wrong password"
-    // to avoid user enumeration attacks.
-    // We also run a dummy bcrypt compare when the user is not found so that
-    // response timing is identical whether the email exists or not — this
-    // prevents timing-based user enumeration.
+    // to avoid user enumeration attacks
     if (!user) {
-      await require("bcryptjs").compare(password, "$2b$12$dummyhashusedtomaintaintimingXXXXXXXXXXXXXXXXXXXXXXXXX");
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
@@ -195,18 +186,10 @@ router.patch(
     body("name")
       .optional()
       .trim()
-      .escape()
       .isLength({ min: 2, max: 80 }).withMessage("Name must be 2–80 characters"),
     body("profileImage")
       .optional()
-      .custom(val => {
-        if (val === null) return true;  // null = clear image, always allowed
-        if (typeof val !== "string") throw new Error("profileImage must be a string");
-        // base64 data URLs: check byte size (base64 is ~4/3 of original)
-        // 2MB image → ~2.7MB base64 string → ~2.8M chars
-        if (val.length > 2_800_000) throw new Error("Image must be under 2 MB");
-        return true;
-      }),
+
   ],
   async (req, res) => {
     if (handleValidation(req, res)) return;
@@ -266,15 +249,6 @@ router.put(
       .isLength({ min: 8 }).withMessage("Password must be at least 8 characters")
       .matches(/[A-Za-z]/).withMessage("Password must contain at least one letter")
       .matches(/\d/).withMessage("Password must contain at least one number"),
-
-    body("profileImage")
-      .optional()
-      .custom(val => {
-        if (val === null) return true;
-        if (typeof val !== "string") throw new Error("profileImage must be a string");
-        if (val.length > 2_800_000) throw new Error("Image must be under 2 MB");
-        return true;
-      }),
   ],
   async (req, res) => {
     if (handleValidation(req, res)) return;
@@ -343,10 +317,10 @@ router.put(
         });
       }
       console.error("[PUT /auth/update]", err);
-      const isDev = process.env.NODE_ENV !== "production";
       res.status(500).json({
-        error: isDev ? (err.message || "Server error") : "Server error",
-        ...(isDev && { type: err.name, stack: err.stack }),
+        error: err.message || "Server error",
+        type:  err.name,
+        ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
       });
     }
   }

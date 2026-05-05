@@ -9,8 +9,8 @@ function getToken()          { return localStorage.getItem(TOKEN_KEY); }
 function setToken(token)     { localStorage.setItem(TOKEN_KEY, token); }
 function clearToken()        { localStorage.removeItem(TOKEN_KEY); }
 
-// ── Auth guards ───────────────────────────────────────────────────────────────
-// protectPage(): call at top of protected pages — redirects to /login if no token
+// ── Auth guard — call at top of every protected page ──────────────────────────
+// Redirects to /login if no valid token is stored.
 function protectPage() {
   if (!getToken()) {
     document.documentElement.style.visibility = "hidden";
@@ -20,7 +20,6 @@ function protectPage() {
   return true;
 }
 
-// publicOnlyPage(): call at top of login/signup — redirects to / if already logged in
 function publicOnlyPage() {
   if (getToken()) {
     document.documentElement.style.visibility = "hidden";
@@ -30,7 +29,7 @@ function publicOnlyPage() {
   return true;
 }
 
-// requireAuth(): alias kept for backwards compatibility
+// requireAuth: alias for backwards compatibility
 function requireAuth() { return protectPage(); }
 
 // ── Authenticated fetch wrapper ───────────────────────────────────────────────
@@ -82,6 +81,79 @@ async function fetchCurrentUser() {
     // Non-fatal — topbar just stays as "…"
     console.warn("[fetchCurrentUser]", e.message);
   }
+}
+
+
+// ── Role utilities ────────────────────────────────────────────────────────────
+// Decode the JWT payload locally — no API call, no library.
+// The role in the token is set at login and matches the DB value.
+// This is for UI gating only; the backend enforces roles authoritatively.
+function getTokenPayload() {
+  try {
+    const token = getToken();
+    if (!token) return null;
+    // JWT is three base64url segments separated by dots — payload is index 1
+    const b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(b64));
+  } catch (_) {
+    return null;
+  }
+}
+
+// Returns the role string from the token ("admin","doctor","nurse","viewer")
+// or "viewer" as the safest default if token is missing or malformed.
+function getRole() {
+  return getTokenPayload()?.role || "viewer";
+}
+
+// Convenience checks
+const Role = {
+  ADMIN:  "admin",
+  DOCTOR: "doctor",
+  NURSE:  "nurse",
+  VIEWER: "viewer",
+};
+
+// Returns true if the current user's role is in the allowed list
+function hasRole(...roles) {
+  return roles.includes(getRole());
+}
+
+// Hides an element by id if the current role is NOT in allowed roles.
+// Uses display:none — element stays in DOM so layout isn't affected by
+// removal; backend will reject unauthorised API calls regardless.
+function gateElement(elementId, ...allowedRoles) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  if (!hasRole(...allowedRoles)) {
+    el.style.display = "none";
+  }
+}
+
+// Apply all role gates for the patient dashboard page.
+// Called once after DOM is ready.
+function applyPatientPageGates() {
+  const role = getRole();
+
+  // ── Edit patient details button ──────────────────────────────────────────
+  // Viewers cannot edit patient data
+  gateElement("editBtn", Role.ADMIN, Role.DOCTOR, Role.NURSE);
+
+  // ── Reset All Data button ────────────────────────────────────────────────
+  // Nurses and viewers cannot delete — only doctor/admin
+  gateElement("resetDataBtn", Role.ADMIN, Role.DOCTOR);
+
+  // ── Role indicator on page (optional debug badge) ────────────────────────
+  // If a role badge element exists, populate it
+  const badge = document.getElementById("currentRoleBadge");
+  if (badge) badge.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+// Apply all role gates for the ward overview page.
+// Called once after DOM is ready. (Currently no role-gated elements on
+// ward overview — placeholder for future use.)
+function applyWardPageGates() {
+  // No role-gated elements on ward overview yet
 }
 
 // ── Logout ────────────────────────────────────────────────────────────────────

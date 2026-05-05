@@ -3,6 +3,9 @@ if (typeof requireAuth === "function" && !requireAuth()) throw new Error("redire
 
 const PATIENTS_API = "/api/patients";
 
+// Active ward filter — empty string means "all wards"
+let _activeWard = "";
+
 function setWardWsStatus(state) {
   // WS status reflected via patient-count-pill border color
   const pill = document.getElementById("patientCount")?.closest(".patient-count-pill");
@@ -103,7 +106,10 @@ function renderPatients(patients) {
   grid.innerHTML = "";
 
   if (!patients.length) {
-    grid.innerHTML = `<div class="empty-state"><i class="fa-solid fa-plug-circle-xmark"></i><p>No patients connected yet. Waiting for ESP32 devices…</p></div>`;
+    const emptyMsg = _activeWard
+      ? `No patients found in <strong>${_activeWard}</strong>.`
+      : "No patients connected yet. Waiting for ESP32 devices…";
+    grid.innerHTML = `<div class="empty-state"><i class="fa-solid fa-plug-circle-xmark"></i><p>${emptyMsg}</p></div>`;
     return;
   }
 
@@ -118,12 +124,24 @@ function renderPatients(patients) {
   if (footer) footer.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
 }
 
-async function fetchPatients() {
+async function fetchPatients(ward) {
+  // ward arg overrides — if omitted, use current _activeWard
+  if (ward !== undefined) _activeWard = ward;
+
+  const url = _activeWard
+    ? `${PATIENTS_API}?ward=${encodeURIComponent(_activeWard)}`
+    : PATIENTS_API;
+
   try {
-    const res  = await authFetch(PATIENTS_API);
+    const res  = await authFetch(url);
     const data = await res.json();
     renderPatients(Array.isArray(data) ? data : []);
   } catch (e) { console.warn("Failed to fetch patients:", e.message); }
+}
+
+// Called by the ward filter dropdown onchange
+function onWardChange(value) {
+  fetchPatients(value);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -139,7 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const socket = io();
   socket.on("connect",             () => setWardWsStatus("connected"));
   socket.on("disconnect",          () => setWardWsStatus("disconnected"));
-  socket.on("patient-list-update", () => fetchPatients());
+  socket.on("patient-list-update", () => fetchPatients());  // reuses _activeWard
 
   setInterval(fetchPatients, 5000);
 });

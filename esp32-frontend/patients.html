@@ -49,6 +49,16 @@
             <i class="fa-solid fa-building-columns"></i>
             Ward Overview
           </h1>
+          <div class="ward-filter-wrap">
+            <i class="fa-solid fa-filter ward-filter-icon"></i>
+            <select id="wardFilter" class="ward-filter-select" onchange="onWardChange(this.value)">
+              <option value="">All Wards</option>
+              <option value="ICU">ICU</option>
+              <option value="OPD">OPD</option>
+              <option value="Ward A">Ward A</option>
+              <option value="Ward B">Ward B</option>
+            </select>
+          </div>
         </div>
         <div class="topbar-meta">
           <div class="patient-count-pill">

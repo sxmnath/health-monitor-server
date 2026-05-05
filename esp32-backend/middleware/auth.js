@@ -106,4 +106,19 @@ async function optionalAuth(req, _res, next) {
   next();
 }
 
-module.exports = { signToken, protect, requireRole, optionalAuth };
+// ─── authorizeRoles — canonical alias for requireRole ─────────────────────────
+/**
+ * Identical behaviour to requireRole() — provided as the canonical name
+ * for role-based route protection going forward.
+ *
+ * Must be used AFTER protect().
+ * Returns 403 if req.user.role is not in the allowed list.
+ *
+ * Usage:  router.patch("/...", protect, authorizeRoles("admin"), handler)
+ *         router.post("/...",  protect, authorizeRoles("admin", "doctor"), handler)
+ *
+ * @param  {...string} roles  One or more permitted roles
+ */
+const authorizeRoles = requireRole;
+
+module.exports = { signToken, protect, requireRole, authorizeRoles, optionalAuth };

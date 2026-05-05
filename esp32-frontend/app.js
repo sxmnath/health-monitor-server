@@ -698,6 +698,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Edit modal
+  // ── Role-based UI gating ──────────────────────────────────────────────────
+  // Hides buttons the current user's role isn't allowed to use.
+  // Backend enforces this independently — this is purely cosmetic.
+  applyPatientPageGates();
+
   document.getElementById("editBtn")?.addEventListener("click", openEditModal);
   document.getElementById("modalClose")?.addEventListener("click", closeEditModal);
   document.getElementById("modalCancel")?.addEventListener("click", closeEditModal);
